@@ -1,0 +1,29 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('businesses', function (Blueprint $table) {
+            $table->json('social_links')->nullable()->after('website');
+            $table->json('bank_details')->nullable()->after('tax_percentage');
+            $table->text('default_invoice_notes')->nullable()->after('invoice_terms');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('businesses', function (Blueprint $table) {
+            $table->dropColumn(['social_links', 'bank_details', 'default_invoice_notes']);
+        });
+    }
+};
