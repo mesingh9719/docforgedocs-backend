@@ -16,11 +16,20 @@ class Document extends Model
         'slug',
         'content',
         'status',
+        'public_token',
+        'pdf_path',
     ];
 
     protected $casts = [
         'content' => 'array',
     ];
+
+    protected $appends = ['pdf_url'];
+
+    public function getPdfUrlAttribute()
+    {
+        return $this->pdf_path ? asset('storage/' . $this->pdf_path) : null;
+    }
 
     public function documentType()
     {
