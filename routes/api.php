@@ -14,6 +14,7 @@ Route::prefix('v1')->group(function () {
     Route::post('/accept-invite', [TeamController::class, 'acceptInvite']);
 
     Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/logout', [AuthController::class, 'logout']);
         Route::put('/user/profile', [AuthController::class, 'updateProfile']);
         Route::post('/business-update', [AuthController::class, 'businessUpdate']);
         Route::get('/user', function (Request $request) {

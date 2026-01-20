@@ -53,4 +53,15 @@ class AuthService
             'token' => $token,
         ];
     }
+
+    /**
+     * Logout a user.
+     *
+     * @param \App\Models\User $user
+     * @return void
+     */
+    public function logout(User $user): void
+    {
+        $user->currentAccessToken()->delete();
+    }
 }

@@ -48,6 +48,21 @@ class AuthController extends Controller
     }
 
     /**
+     * Logout a user.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function logout(Request $request)
+    {
+        $this->authService->logout($request->user());
+
+        return response()->json([
+            'message' => 'Logged out successfully.',
+        ]);
+    }
+
+    /**
      * Update business information.
      *
      * @param \App\Http\Requests\Api\V1\BusinessUpdateRequest $request

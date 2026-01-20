@@ -20,7 +20,7 @@ class DashboardController extends Controller
         }
 
         // Stats
-        $totalDocuments = \App\Models\Document::where('user_id', $user->id)
+        $totalDocuments = \App\Models\Document::where('created_by', $user->id)
             ->orWhereHas('business', function ($q) use ($business) {
                 $q->where('id', $business->id);
             })->count();
