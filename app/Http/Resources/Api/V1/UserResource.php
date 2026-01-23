@@ -21,10 +21,18 @@ class UserResource extends JsonResource
             'email_verified_at' => $this->email_verified_at,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'business' => new BusinessResource($this->resolveBusiness()),
+            'business' => new BusinessResource($this->resource->resolveBusiness()),
             // Add Role/Permissions context
-            'role' => $this->resolveRole(),
-            'permissions' => $this->resolvePermissions(),
+            'role' => $this->resource->resolveRole(),
+            'permissions' => $this->resource->resolvePermissions(),
+            'is_platform_admin' => $this->is_platform_admin,
+            'documents_count' => $this->documents_count,
+            'child_users_count' => $this->child_users_count,
+            'parent_user' => ($this->relationLoaded('parentUser') && $this->parentUser)
+                ? new UserResource($this->parentUser->parent)
+                : null,
+            'documents' => DocumentResource::collection($this->whenLoaded('documents')),
+            'child_users' => UserResource::collection($this->whenLoaded('children')),
         ];
     }
 }

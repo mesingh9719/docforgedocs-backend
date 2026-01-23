@@ -22,6 +22,24 @@ Route::prefix('v1')->group(function () {
         Route::get('/user', function (Request $request) {
             return new \App\Http\Resources\Api\V1\UserResource($request->user());
         });
+
+        // Admin Routes
+        Route::middleware([\App\Http\Middleware\EnsurePlatformAdmin::class])->group(function () {
+            Route::get('/admin/stats', [\App\Http\Controllers\Api\V1\AdminController::class, 'stats']);
+            Route::get('/admin/settings', [\App\Http\Controllers\Api\V1\AdminSettingController::class, 'index']);
+            Route::post('/admin/settings', [\App\Http\Controllers\Api\V1\AdminSettingController::class, 'update']);
+            Route::apiResource('/admin/users', \App\Http\Controllers\Api\V1\AdminUserController::class);
+            Route::apiResource('/admin/documents', \App\Http\Controllers\Api\V1\AdminDocumentController::class);
+
+            // Master Data Routes
+            Route::controller(\App\Http\Controllers\Api\V1\AdminMasterDataController::class)->prefix('admin/master-data')->group(function () {
+                Route::get('{type}', 'index');
+                Route::post('{type}', 'store');
+                Route::put('{type}/{id}', 'update');
+                Route::delete('{type}/{id}', 'destroy');
+            });
+        });
+
         Route::get('/documents/next-invoice-number', [DocumentController::class, 'getNextInvoiceNumber']);
         Route::apiResource('documents', DocumentController::class);
         Route::post('documents/{document}/generate-pdf', [DocumentController::class, 'generatePdf']);

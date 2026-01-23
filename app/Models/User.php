@@ -44,7 +44,16 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_platform_admin' => 'boolean',
         ];
+    }
+
+    /**
+     * Check if the user is a platform admin.
+     */
+    public function isPlatformAdmin(): bool
+    {
+        return $this->is_platform_admin;
     }
 
     public function childUsers()
@@ -124,5 +133,10 @@ class User extends Authenticatable
         }
 
         return [];
+    }
+
+    public function documents()
+    {
+        return $this->hasMany(Document::class, 'created_by');
     }
 }

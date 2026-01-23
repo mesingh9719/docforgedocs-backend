@@ -14,6 +14,11 @@ class StoreDocumentRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation()
+    {
+        \Illuminate\Support\Facades\Log::info('StoreDocumentRequest Input:', $this->all());
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -23,7 +28,7 @@ class StoreDocumentRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'type_slug' => 'required|string|exists:document_types,slug', // Client sends 'nda', 'proposal', 'invoice'
+            'type_slug' => 'required|string', // Temporarily removed exists check to debug
             'content' => 'required|array', // JSON content
             'description' => 'nullable|string',
             'status' => 'nullable|string|in:draft,sent,archived',

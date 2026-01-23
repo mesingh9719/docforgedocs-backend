@@ -16,14 +16,25 @@ class DocumentResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'name' => $this->name,
-            'slug' => $this->slug,
-            'description' => $this->description,
-            'content' => $this->content, // Will be automatically cast to array by Eloquent
-            'status' => $this->status,
-            'type' => $this->documentType ? $this->documentType->slug : null,
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
+            'title' => $this->resource->name, // Alias name to title for frontend
+            'slug' => $this->resource->slug,
+            'description' => $this->resource->description,
+            'content' => $this->resource->content,
+            'status' => $this->resource->status,
+            'type' => $this->resource->documentType ? [
+                'id' => $this->resource->documentType->id,
+                'name' => $this->resource->documentType->name,
+                'slug' => $this->resource->documentType->slug,
+            ] : null,
+            'business' => new BusinessResource($this->resource->business),
+            'creator' => $this->resource->creator ? [
+                'id' => $this->resource->creator->id,
+                'name' => $this->resource->creator->name,
+                'email' => $this->resource->creator->email,
+            ] : null,
+            'pdf_url' => $this->resource->pdf_url,
+            'created_at' => $this->resource->created_at,
+            'updated_at' => $this->resource->updated_at,
         ];
     }
 }
