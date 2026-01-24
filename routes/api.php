@@ -15,6 +15,11 @@ Route::prefix('v1')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/accept-invite', [TeamController::class, 'acceptInvite']);
 
+    // Email Verification
+    Route::get('/email/verify/{id}/{hash}', [\App\Http\Controllers\Api\V1\VerificationController::class, 'verify'])
+        ->middleware(['signed'])
+        ->name('verification.verify');
+
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::put('/user/profile', [AuthController::class, 'updateProfile']);

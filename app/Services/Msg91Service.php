@@ -89,6 +89,8 @@ class Msg91Service
                 'authkey' => $this->authKey,
             ])->post($this->baseUrl, $payload);
 
+            /** @var \Illuminate\Http\Client\Response $response */
+
             if ($response->successful()) {
                 Log::info('MSG91 Email Sent: ' . $response->body());
                 return [

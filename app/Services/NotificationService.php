@@ -17,7 +17,7 @@ class NotificationService
     public function __construct(Msg91Service $msg91Service)
     {
         $this->msg91Service = $msg91Service;
-        $this->environment = config('app.email_environment', env('EMAIL_ENVIRONMENT', 'local'));
+        $this->environment = config('services.app.email_environment', 'local');
     }
 
     /**

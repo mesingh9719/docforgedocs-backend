@@ -6,13 +6,14 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
+use Illuminate\Support\Facades\URL;
+
 class AuthService
 {
     /**
-     * Register a new user.
+     * Create a new service instance.
      *
-     * @param array $data
-     * @return array
+     * @param NotificationService $notificationService
      */
     public function __construct(
         protected NotificationService $notificationService
@@ -37,8 +38,15 @@ class AuthService
 
         // Send Verification Email
         try {
-            // Generate a verification link (pointing to frontend)
-            $verificationUrl = config('app.frontend_url', 'http://localhost:5173') . '/verify-email?email=' . urlencode($user->email);
+            // Generate a signed URL for the backend verification route
+            $backendUrl = URL::temporarySignedRoute(
+                'verification.verify',
+                now()->addMinutes(60),
+                ['id' => $user->id, 'hash' => sha1($user->getEmailForVerification())]
+            );
+
+            // Construct the frontend URL with the backend URL as a parameter
+            $verificationUrl = config('app.frontend_url', 'http://localhost:5173') . '/verify-email?verify_url=' . urlencode($backendUrl);
 
             $this->notificationService->sendVerificationEmail($user, $verificationUrl);
 
