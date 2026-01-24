@@ -20,13 +20,13 @@ return [
     'allowed_methods' => ['*'],
 
     'allowed_origins' => [
+        'https://docforgedocs.com',
+        'https://www.docforgedocs.com',
+        'https://admin-xyz.docforgedocs.com',
         'http://localhost:5173',
         'http://127.0.0.1:5173',
         'http://localhost:5174',
         'http://127.0.0.1:5174',
-        'https://docforgedocs.com',
-        'https://www.docforgedocs.com',
-        'https://admin-xyz.docforgedocs.com',
     ],
 
     'allowed_origins_patterns' => [],
@@ -37,6 +37,6 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => true,
+    'supports_credentials' => false,
 
 ];
