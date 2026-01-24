@@ -56,6 +56,11 @@ class Msg91Service
             return ['success' => false, 'error' => 'No valid recipients'];
         }
 
+        if (empty($this->authKey)) {
+            Log::error('MSG91 Error: Auth Key is missing in configuration.');
+            return ['success' => false, 'error' => 'Auth Key missing'];
+        }
+
         // 2. Construct Payload strictly following MSG91 v5 recommended structure
         // "recipients": [ { "to": [...], "variables": {...} } ]
         $recipientsPayload = [
@@ -68,6 +73,7 @@ class Msg91Service
         $payload = [
             'recipients' => $recipientsPayload,
             'from' => [
+                'name' => config('app.name', 'DocForgeDocs'),
                 'email' => $this->fromEmail
             ],
             'domain' => $this->domain,

@@ -31,11 +31,10 @@ class NotificationService
                 ['email' => $user->email, 'name' => $user->name],
                 config('services.msg91.verification_template_id', 'email_verification_docforge_docs'),
                 [
-                    'name' => $user->name,
-                    'verification_link' => $link,
-                    'year' => date('Y'),
-                    'VAR1' => config('app.name', 'DocForgeDocs'),
-                    // Note: If business name is needed here, pass it as an argument to this method
+                    '{name}' => $user->name,
+                    '{verification_link}' => $link,
+                    '{year}' => date('Y'),
+                    '{VAR1}' => config('app.name', 'DocForgeDocs'),
                 ]
             );
         } else {
@@ -54,12 +53,12 @@ class NotificationService
             Log::info("Sending Team Invitation via MSG91 to {$email}");
             return $this->msg91Service->sendEmail(
                 $email,
-                config('services.msg91.invitation_template_id'),
+                config('services.msg91.invitation_template_id', 'team_invitation_docforge_docs'),
                 [
-                    'link' => $link,
-                    'business_name' => $businessName,
-                    'role' => $role,
-                    'sender_name' => $senderName,
+                    '{link}' => $link,
+                    '{business_name}' => $businessName,
+                    '{role}' => $role,
+                    '{sender_name}' => $senderName,
                 ]
             );
         } else {
