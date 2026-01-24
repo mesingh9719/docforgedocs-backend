@@ -14,18 +14,25 @@ class BusinessService
      * @param array $data
      * @return Business
      */
+    /**
+     * Update business information.
+     *
+     * @param int $businessId
+     * @param array $data
+     * @return Business
+     */
     public function updateBusiness(int $businessId, array $data): Business
     {
         $business = Business::findOrFail($businessId);
 
         if (isset($data['logo']) && $data['logo'] instanceof \Illuminate\Http\UploadedFile) {
-            $path = $data['logo']->store('business/' . $business->id . '/logo', 'public');
-            /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
-            $disk = \Illuminate\Support\Facades\Storage::disk('public');
-            $data['logo'] = $disk->url($path);
+            $data['logo'] = $this->processAndUploadImage($data['logo'], 'business/' . $business->id . '/logo');
         }
 
         if (isset($data['favicon']) && $data['favicon'] instanceof \Illuminate\Http\UploadedFile) {
+            // Favicon logic remains specific or detailed, usually we don't compress favicons heavily or convert to webp if .ico is needed,
+            // but for specific processing we can use default store or same logic. 
+            // For now keeping it standard or similar.
             $path = $data['favicon']->store('business/' . $business->id . '/favicon', 'public');
             /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
             $disk = \Illuminate\Support\Facades\Storage::disk('public');
@@ -61,17 +68,39 @@ class BusinessService
 
         // 2. Handle Logo Upload if present
         if (isset($data['logo']) && $data['logo'] instanceof \Illuminate\Http\UploadedFile) {
-            $path = $data['logo']->store('business/' . $business->id . '/logo', 'public');
-            /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
-            $disk = \Illuminate\Support\Facades\Storage::disk('public');
-            $business->update(['logo' => $disk->url($path)]);
+            $logoUrl = $this->processAndUploadImage($data['logo'], 'business/' . $business->id . '/logo');
+            $business->update(['logo' => $logoUrl]);
         }
 
-        // 3. Link user as owner in child_users (already handled by creating? No, createBusiness usually implies the user IS the owner)
-        // The check in BusinessController says if(!$user->resolveBusiness()), implying 1-to-1 or owned relation.
-        // We should ensure the relationship is established if needed, but assuming resolveBusiness checks user_id on business table:
-        // schema: user_id foreign key exists. So we are good.
-
         return $business;
+    }
+
+    /**
+     * Process and upload image (Convert to WebP and Compress).
+     *
+     * @param \Illuminate\Http\UploadedFile $file
+     * @param string $pathPrefix
+     * @return string
+     */
+    protected function processAndUploadImage(\Illuminate\Http\UploadedFile $file, string $pathPrefix): string
+    {
+        $manager = new \Intervention\Image\ImageManager(new \Intervention\Image\Drivers\Gd\Driver());
+
+        $image = $manager->read($file);
+
+        // Encode to WebP with 75% quality
+        $encoded = $image->toWebp(75);
+
+        // Generate filename
+        $filename = \Illuminate\Support\Str::random(40) . '.webp';
+        $fullPath = $pathPrefix . '/' . $filename;
+
+        // Store
+        \Illuminate\Support\Facades\Storage::disk('public')->put($fullPath, (string) $encoded);
+
+        // Return URL
+        /** @var \Illuminate\Filesystem\FilesystemAdapter $disk */
+        $disk = \Illuminate\Support\Facades\Storage::disk('public');
+        return $disk->url($fullPath);
     }
 }

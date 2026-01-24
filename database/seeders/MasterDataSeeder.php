@@ -33,6 +33,7 @@ class MasterDataSeeder extends Seeder
         }
 
         // 2. Currencies
+        // 2. Currencies
         $currencies = [
             ['code' => 'USD', 'name' => 'US Dollar', 'symbol' => '$'],
             ['code' => 'EUR', 'name' => 'Euro', 'symbol' => '€'],

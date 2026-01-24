@@ -28,7 +28,21 @@ class StoreBusinessRequest extends FormRequest
             'city' => ['required', 'string', 'max:255'],
             'country' => ['required', 'string', 'max:255'],
             'website' => ['nullable', 'url', 'max:255'],
-            'logo' => ['nullable', 'image', 'max:2048'],
+            'logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp', 'max:1024'],
+        ];
+    }
+
+    /**
+     * Get the error messages for the defined validation rules.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'logo.mimes' => 'Invalid file type. Please upload a PNG, JPG, or WEBP file.',
+            'logo.max' => 'The logo must not be larger than 1MB.',
+            'logo.image' => 'The file must be an image.',
         ];
     }
 }

@@ -32,6 +32,10 @@ Route::prefix('v1')->group(function () {
             return new \App\Http\Resources\Api\V1\UserResource($request->user());
         });
 
+        // Master Data Routes
+        Route::get('/currencies', [\App\Http\Controllers\Api\V1\MasterDataController::class, 'currencies']);
+        Route::get('/tax-rates', [\App\Http\Controllers\Api\V1\MasterDataController::class, 'taxRates']);
+
         // Admin Routes
         Route::middleware([\App\Http\Middleware\EnsurePlatformAdmin::class])->group(function () {
             Route::get('/admin/stats', [\App\Http\Controllers\Api\V1\AdminController::class, 'stats']);
