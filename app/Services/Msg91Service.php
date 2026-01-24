@@ -73,7 +73,6 @@ class Msg91Service
         $payload = [
             'recipients' => $recipientsPayload,
             'from' => [
-                'name' => config('app.name', 'DocForgeDocs'),
                 'email' => $this->fromEmail
             ],
             'domain' => $this->domain,
