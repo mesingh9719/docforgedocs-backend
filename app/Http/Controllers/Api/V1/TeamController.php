@@ -16,6 +16,11 @@ use App\Mail\TeamInvitation;
 
 class TeamController extends Controller
 {
+    public function __construct(
+        protected \App\Services\NotificationService $notificationService
+    ) {
+    }
+
     /**
      * list members
      */
@@ -87,8 +92,6 @@ class TeamController extends Controller
         ]);
 
         // Send Invitation Email
-        // Assuming we have a Mailable "TeamInvitation"
-        // We need the accept URL. Frontend route: /accept-invite?token=XYZ
         try {
             // Use config or env for frontend URL
             $baseUrl = config('app.frontend_url', 'http://localhost:5173');
@@ -96,12 +99,18 @@ class TeamController extends Controller
 
             $businessName = $business->name;
 
-            // Send Email
-            Mail::to($newUser->email)->send(new TeamInvitation($inviteUrl, $businessName, $request->role));
+            // Send Email using NotificationService
+            $this->notificationService->sendTeamInvitation(
+                $newUser->email,
+                $inviteUrl,
+                $businessName,
+                $request->role,
+                $user->name
+            );
 
         } catch (\Exception $e) {
             // Log email failure but don't fail the request completely if possible, or do.
-            // For now, let's proceed.
+            \Illuminate\Support\Facades\Log::error("Failed to send invitation email: " . $e->getMessage());
         }
 
         return response()->json(['message' => 'Invitation sent successfully', 'data' => $childUser], 201);

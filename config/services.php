@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    'msg91' => [
+        'key' => env('MSG91_AUTH_KEY'),
+        'domain' => env('MSG91_DOMAIN', 'docforgedocs.com'),
+        'from_email' => env('MSG91_FROM_EMAIL', 'no-reply@docforgedocs.com'),
+        'verification_template_id' => env('MSG91_VERIFICATION_TEMPLATE_ID'),
+        'invitation_template_id' => env('MSG91_INVITATION_TEMPLATE_ID'),
+    ],
+    'app' => [
+        'email_environment' => env('EMAIL_ENVIRONMENT', 'local'),
+    ],
+
 ];
