@@ -29,54 +29,53 @@ class Msg91Service
      */
     public function sendEmail($to, string $templateId, array $variables = [])
     {
-        // Format recipients
-        $recipients = [];
+        // 1. Normalize 'to' into a strict list of objects: [['email' => '...', 'name' => '...']]
+        $normalizedTo = [];
+
         if (is_string($to)) {
-            $recipients[] = [
-                'to' => [
-                    ['email' => $to]
-                ],
-                'variables' => $variables
-            ];
-        } elseif (isset($to['email'])) {
-            // Single recipient object
-            $recipients[] = [
-                'to' => [$to],
-                'variables' => $variables
-            ];
-        } else {
-            // Assume strict structure or handle array of emails
-            // For simplicity, let's assume strict structure as per docs or auto-format
-            // Current doc example structure:
-            // "recipients": [ { "to": [ {"email": "...", "name": "..."} ], "variables": {...} } ]
-
-            // If user passes direct email string, we wrapped it above.
-            // If user passes multiple recipients with distinct variables, they should construct that array.
-            // Here we handle the simple case: One main recipient set with one set of variables.
-            $recipients[] = [
-                'to' => is_array($to) && isset($to[0]['email']) ? $to : [['email' => $to]], // Fallback
-                'variables' => $variables
-            ];
+            $normalizedTo[] = ['email' => $to];
+        } elseif (is_array($to)) {
+            // Check if it's a single associative array: ['email' => 'foo@bar.com']
+            if (isset($to['email'])) {
+                $normalizedTo[] = $to;
+            } else {
+                // Check if it's an indexed array of recipients (or strings)
+                // We'll iterate to be safe
+                foreach ($to as $recipient) {
+                    if (is_string($recipient)) {
+                        $normalizedTo[] = ['email' => $recipient];
+                    } elseif (is_array($recipient) && isset($recipient['email'])) {
+                        $normalizedTo[] = $recipient;
+                    }
+                }
+            }
         }
 
-        // Fix: If the $to argument was already the full 'to' array structure
-        if (is_array($to) && isset($to[0]['email'])) {
-            $recipients = [
-                [
-                    'to' => $to,
-                    'variables' => $variables
-                ]
-            ];
+        if (empty($normalizedTo)) {
+            Log::error('MSG91 Email Error: No valid recipients provided.');
+            return ['success' => false, 'error' => 'No valid recipients'];
         }
+
+        // 2. Construct Payload strictly following MSG91 v5 recommended structure
+        // "recipients": [ { "to": [...], "variables": {...} } ]
+        $recipientsPayload = [
+            [
+                'to' => $normalizedTo,
+                'variables' => $variables
+            ]
+        ];
 
         $payload = [
-            'recipients' => $recipients,
+            'recipients' => $recipientsPayload,
             'from' => [
                 'email' => $this->fromEmail
             ],
             'domain' => $this->domain,
             'template_id' => $templateId
         ];
+
+        // Log the payload for debugging (optional, remove in high volume prod if needed)
+        Log::info('MSG91 Payload:', $payload);
 
         try {
             $response = Http::withHeaders([
@@ -86,6 +85,7 @@ class Msg91Service
             ])->post($this->baseUrl, $payload);
 
             if ($response->successful()) {
+                Log::info('MSG91 Email Sent: ' . $response->body());
                 return [
                     'success' => true,
                     'data' => $response->json()
