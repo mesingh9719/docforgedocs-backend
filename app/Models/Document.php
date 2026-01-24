@@ -46,6 +46,14 @@ class Document extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * Alias for creator to fix "undefined relationship [user]" error.
+     */
+    public function user()
+    {
+        return $this->creator();
+    }
+
     public function updater()
     {
         return $this->belongsTo(User::class, 'updated_by');
