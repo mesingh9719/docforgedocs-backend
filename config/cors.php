@@ -26,8 +26,7 @@ return [
         'http://127.0.0.1:5174',
         'https://docforgedocs.com',
         'https://www.docforgedocs.com',
-        'https://app.docforgedocs.com',
-        'https://admin.docforgedocs.com',
+        'https://admin-xyz.docforgedocs.com',
     ],
 
     'allowed_origins_patterns' => [],
