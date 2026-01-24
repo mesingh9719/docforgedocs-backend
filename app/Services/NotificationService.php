@@ -26,15 +26,15 @@ class NotificationService
     public function sendVerificationEmail(User $user, string $link)
     {
         if ($this->environment === 'production') {
-            Log::info("Sending Verification Email via MSG91 to {$user->email}");
+            Log::info("Sending Verification Email via MSG91 to {$user->email}. Link: {$link}");
             return $this->msg91Service->sendEmail(
                 ['email' => $user->email, 'name' => $user->name],
                 config('services.msg91.verification_template_id', 'email_verification_docforge_docs'),
                 [
-                    '{name}' => $user->name,
-                    '{verification_link}' => $link,
-                    '{year}' => date('Y'),
-                    '{VAR1}' => config('app.name', 'DocForgeDocs'),
+                    'name' => $user->name,
+                    'verification_link' => $link,
+                    'year' => date('Y'),
+                    'VAR1' => config('app.name', 'DocForgeDocs'),
                 ]
             );
         } else {
@@ -55,10 +55,10 @@ class NotificationService
                 $email,
                 config('services.msg91.invitation_template_id', 'team_invitation_docforge_docs'),
                 [
-                    '{link}' => $link,
-                    '{business_name}' => $businessName,
-                    '{role}' => $role,
-                    '{sender_name}' => $senderName,
+                    'link' => $link,
+                    'business_name' => $businessName,
+                    'role' => $role,
+                    'sender_name' => $senderName,
                 ]
             );
         } else {

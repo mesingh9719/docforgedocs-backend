@@ -13,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
+        $middleware->trustProxies(at: '*');
         $middleware->alias([
             'check.permission' => \App\Http\Middleware\CheckPermission::class,
         ]);

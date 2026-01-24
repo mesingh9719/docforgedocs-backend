@@ -37,7 +37,28 @@ class AuthService
         $token = $user->createToken('auth_token')->plainTextToken;
 
         // Send Verification Email
+        $this->sendVerificationNotification($user);
+
+        return [
+            'user' => $user,
+            'token' => $token,
+        ];
+    }
+
+    /**
+     * Send the email verification notification.
+     *
+     * @param User $user
+     * @return void
+     */
+    public function sendVerificationNotification(User $user): void
+    {
         try {
+            // Ensure secure URL generation for production
+            if (app()->environment('production')) {
+                URL::forceScheme('https');
+            }
+
             // Generate a signed URL for the backend verification route
             $backendUrl = URL::temporarySignedRoute(
                 'verification.verify',
@@ -54,12 +75,9 @@ class AuthService
             // Log error but don't block registration
             \Illuminate\Support\Facades\Log::error("Failed to send verification email: " . $e->getMessage());
         }
-
-        return [
-            'user' => $user,
-            'token' => $token,
-        ];
     }
+
+
 
     /**
      * Login a user.

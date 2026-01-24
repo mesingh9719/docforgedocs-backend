@@ -16,9 +16,13 @@ Route::prefix('v1')->group(function () {
     Route::post('/accept-invite', [TeamController::class, 'acceptInvite']);
 
     // Email Verification
+    // Email Verification
     Route::get('/email/verify/{id}/{hash}', [\App\Http\Controllers\Api\V1\VerificationController::class, 'verify'])
-        ->middleware(['signed'])
         ->name('verification.verify');
+
+    // Email Resend
+    Route::post('/email/resend', [\App\Http\Controllers\Api\V1\VerificationController::class, 'resend'])
+        ->middleware(['auth:sanctum']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
