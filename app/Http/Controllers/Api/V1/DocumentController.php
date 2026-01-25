@@ -80,6 +80,14 @@ class DocumentController extends Controller
             'status' => $request->status ?? 'draft',
         ]);
 
+        \App\Services\ActivityLogger::log(
+            'document.created',
+            "Document created: {$document->name}",
+            'info',
+            ['document_id' => $document->id],
+            $user->id
+        );
+
         return new DocumentResource($document);
     }
 
@@ -113,6 +121,22 @@ class DocumentController extends Controller
             'description' => $request->description ?? $document->description,
             'status' => $request->status ?? $document->status,
             'updated_by' => $request->user()->id,
+        ]);
+
+        \App\Services\ActivityLogger::log(
+            'document.updated',
+            "Document updated: {$document->name}",
+            'info',
+            ['document_id' => $document->id, 'changes' => array_keys($request->only('name', 'status', 'description'))],
+            $request->user()->id
+        );
+
+        // Create a new version snapshot
+        $latestVersion = $document->versions()->max('version_number') ?? 0;
+        $document->versions()->create([
+            'content' => $document->content,
+            'version_number' => $latestVersion + 1,
+            'created_by' => $request->user()->id,
         ]);
 
         return new DocumentResource($document);
@@ -164,6 +188,14 @@ class DocumentController extends Controller
         \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $pdf->output());
 
         $document->update(['pdf_path' => $filename]);
+
+        \App\Services\ActivityLogger::log(
+            'document.generated_pdf',
+            "PDF Generated for: {$document->name}",
+            'info',
+            ['document_id' => $document->id],
+            $business->user_id // or Auth::id()
+        );
 
         return response()->json([
             'message' => 'PDF generated successfully',
@@ -270,6 +302,22 @@ class DocumentController extends Controller
             'status' => 'sent'
         ]);
 
+        // Record Share History
+        $document->shares()->create([
+            'user_id' => $request->user()->id,
+            'recipient_email' => $email,
+            'message' => $customMessage,
+            'sent_at' => now()
+        ]);
+
+        \App\Services\ActivityLogger::log(
+            'document.sent',
+            "Document sent to {$email}",
+            'info',
+            ['document_id' => $document->id, 'recipient' => $email],
+            $request->user()->id
+        );
+
         return response()->json([
             'message' => 'Email queued for sending.',
             'document' => $document->fresh(),
@@ -302,6 +350,87 @@ class DocumentController extends Controller
 
         $document->update(['last_reminded_at' => now()]);
 
+        // Record Share History
+        $document->shares()->create([
+            'user_id' => $request->user()->id,
+            'recipient_email' => $email,
+            'message' => $customMessage,
+            'sent_at' => now()
+        ]);
+
+        \App\Services\ActivityLogger::log(
+            'document.remind',
+            "Reminder sent to {$email}",
+            'info',
+            ['document_id' => $document->id, 'recipient' => $email],
+            $request->user()->id
+        );
+
         return response()->json(['message' => 'Reminder queued for sending.', 'document' => $document->fresh()]);
+    }
+
+    public function getVersions(Request $request, Document $document)
+    {
+        $business = $request->user()->resolveBusiness();
+        if (!$business || $document->business_id !== $business->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        return response()->json([
+            'data' => $document->versions()->with('creator:id,name')->orderBy('version_number', 'desc')->get()->map(function ($v) {
+                return [
+                    'id' => $v->id,
+                    'version_number' => $v->version_number,
+                    'created_at' => $v->created_at->toIso8601String(),
+                    'created_by' => $v->creator ? $v->creator->name : 'Unknown',
+                    'content' => $v->content // Include content for preview/restore
+                ];
+            })
+        ]);
+    }
+
+    public function restoreVersion(Request $request, Document $document, $versionId)
+    {
+        $business = $request->user()->resolveBusiness();
+        if (!$business || $document->business_id !== $business->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $version = $document->versions()->findOrFail($versionId);
+
+        // Update document content to match version
+        $document->update([
+            'content' => $version->content,
+            'updated_by' => $request->user()->id,
+        ]);
+
+        // Create a new version snapshot for this "Restore" event
+        $latestVersion = $document->versions()->max('version_number') ?? 0;
+        $document->versions()->create([
+            'content' => $document->content,
+            'version_number' => $latestVersion + 1,
+            'created_by' => $request->user()->id,
+        ]);
+
+        \App\Services\ActivityLogger::log(
+            'document.restored',
+            "Document restored to version {$version->version_number}",
+            'info',
+            ['document_id' => $document->id, 'version_restored' => $version->version_number],
+            $request->user()->id
+        );
+
+        return new DocumentResource($document);
+    }
+    public function getShares(Request $request, Document $document)
+    {
+        $business = $request->user()->resolveBusiness();
+        if (!$business || $document->business_id !== $business->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        return response()->json([
+            'data' => $document->shares()->with('sender:id,name')->get()
+        ]);
     }
 }

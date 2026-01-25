@@ -19,6 +19,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        \Illuminate\Support\Facades\Queue::failing(function (\Illuminate\Queue\Events\JobFailed $event) {
+            \App\Services\ActivityLogger::log(
+                'job.failed',
+                'Job failed: ' . $event->job->resolveName(),
+                'error',
+                [
+                    'connection' => $event->connectionName,
+                    'queue' => $event->job->getQueue(),
+                    'exception' => $event->exception->getMessage(),
+                ]
+            );
+        });
     }
 }

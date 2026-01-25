@@ -23,6 +23,14 @@ class AuthController extends Controller
     {
         $result = $this->authService->register($request->validated());
 
+        \App\Services\ActivityLogger::log(
+            'user.register',
+            'New user registration: ' . $result['user']->name,
+            'info',
+            ['email' => $result['user']->email],
+            $result['user']->id
+        );
+
         return response()->json([
             'message' => 'User registered successfully.',
             'data' => new \App\Http\Resources\Api\V1\UserResource($result['user']),
@@ -40,6 +48,14 @@ class AuthController extends Controller
     {
         $result = $this->authService->login($request->validated());
 
+        \App\Services\ActivityLogger::log(
+            'user.login',
+            'User logged in',
+            'info',
+            ['ip' => $request->ip()],
+            $result['user']->id
+        );
+
         return response()->json([
             'message' => 'Login successful.',
             'data' => new \App\Http\Resources\Api\V1\UserResource($result['user']),
@@ -55,7 +71,12 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
-        $this->authService->logout($request->user());
+        $user = $request->user();
+        $this->authService->logout($user);
+
+        if ($user) {
+            \App\Services\ActivityLogger::log('user.logout', 'User logged out', 'info', [], $user->id);
+        }
 
         return response()->json([
             'message' => 'Logged out successfully.',

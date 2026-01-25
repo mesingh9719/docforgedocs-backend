@@ -42,6 +42,7 @@ return [
         'verification_template_id' => env('MSG91_VERIFICATION_TEMPLATE_ID', 'email_verification_docforge_docs'),
         'invitation_template_id' => env('MSG91_MEMBER_INVITE_TEMPLATE_ID', 'member_invitation_for_docforgedocs'),
         'password_reset_template_id' => env('RESET_PASSWORD_TEMPLATE_ID', 'reset_password_docforgedocs'),
+        'document_shared_template_id' => env('DOCUMENT_SHARED_TEMPLATE_ID', 'document_shared_template_docforgedocs'),
     ],
     'app' => [
         'email_environment' => env('EMAIL_ENVIRONMENT', 'local'),

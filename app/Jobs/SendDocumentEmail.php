@@ -28,9 +28,20 @@ class SendDocumentEmail implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(\App\Services\NotificationService $notificationService): void
     {
-        \Illuminate\Support\Facades\Mail::to($this->email)
-            ->send(new \App\Mail\DocumentShared($this->document, $this->shareLink, $this->customMessage));
+        // Try to identify sender name vs recipient name
+        // The service needs proper names
+        // document->created_by user name is sender
+        $senderName = $this->document->creator ? $this->document->creator->name : config('app.name');
+        $recipientName = 'Recipient'; // Or derive from email if user exists?
+
+        $notificationService->sendDocumentShared(
+            $this->email,
+            $recipientName,
+            $senderName,
+            $this->document->name,
+            $this->shareLink
+        );
     }
 }

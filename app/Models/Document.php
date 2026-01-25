@@ -58,4 +58,13 @@ class Document extends Model
     {
         return $this->belongsTo(User::class, 'updated_by');
     }
+
+    public function versions()
+    {
+        return $this->hasMany(DocumentVersion::class)->orderBy('version_number', 'desc');
+    }
+    public function shares()
+    {
+        return $this->hasMany(DocumentShare::class)->orderBy('sent_at', 'desc');
+    }
 }

@@ -70,16 +70,30 @@ class TeamController extends Controller
         // If current user is a sub-user, the business owner is the parent.
         $ownerId = $business->user_id; // Assuming Business has user_id
 
-        // We will create a user with empty password (or unusable) and set status pending.
-        $newUser = User::create([
-            'name' => 'Pending User', // Placeholder
-            'email' => $request->email,
-            'password' => Hash::make(Str::random(32)), // Random secure password
-        ]);
+        // Check if user already exists
+        $newUser = User::where('email', $request->email)->first();
+
+        if ($newUser) {
+            // Check if already a member of *this* business
+            $existingMember = ChildUser::where('business_id', $businessId)
+                ->where('user_id', $newUser->id)
+                ->first();
+
+            if ($existingMember) {
+                return response()->json(['message' => 'User is already a member of this team.'], 422);
+            }
+        } else {
+            // Create new user if not exists
+            $newUser = User::create([
+                'name' => 'Pending User', // Placeholder
+                'email' => $request->email,
+                'password' => Hash::make(Str::random(32)), // Random secure password
+            ]);
+        }
 
         $token = Str::random(60);
 
-        // Link to parent (Business Owner) because the team belongs to the Business
+        // Link to parent (Business Owner)
         $childUser = ChildUser::create([
             'parent_id' => $ownerId,
             'user_id' => $newUser->id,
@@ -106,6 +120,14 @@ class TeamController extends Controller
                 $businessName,
                 $request->role,
                 $user->name
+            );
+
+            \App\Services\ActivityLogger::log(
+                'team.invite',
+                "Invited {$newUser->email} as {$request->role}",
+                'info',
+                ['email' => $newUser->email, 'role' => $request->role],
+                $user->id
             );
 
         } catch (\Exception $e) {
@@ -201,6 +223,14 @@ class TeamController extends Controller
             if ($inviter) {
                 $inviter->notify(new \App\Notifications\InvitationAccepted($user));
             }
+
+            \App\Services\ActivityLogger::log(
+                'team.join',
+                "User joined the team: {$user->name}",
+                'info',
+                ['email' => $user->email],
+                $user->id
+            );
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("Failed to send in-app notification: " . $e->getMessage());
         }

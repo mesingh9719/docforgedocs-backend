@@ -40,14 +40,15 @@ class DashboardController extends Controller
             $q->where('created_at', '>=', $startDate);
         };
 
-        // Queries
-        $totalDocuments = Document::whereIn('created_by', $userIds)->where($dateQuery)->count();
+        // Queries - use all time for dashboard overview
+        $totalDocuments = Document::whereIn('created_by', $userIds)->count();
         $teamSize = $business ? ChildUser::where('business_id', $business->id)->count() : 0;
 
+        // Breakdown (All Time)
         $breakdown = [
-            'draft' => Document::whereIn('created_by', $userIds)->where('status', 'draft')->where($dateQuery)->count(),
-            'sent' => Document::whereIn('created_by', $userIds)->where('status', 'sent')->where($dateQuery)->count(),
-            'completed' => Document::whereIn('created_by', $userIds)->where('status', 'completed')->where($dateQuery)->count(),
+            'draft' => Document::whereIn('created_by', $userIds)->where('status', 'draft')->count(),
+            'sent' => Document::whereIn('created_by', $userIds)->where('status', 'sent')->count(),
+            'completed' => Document::whereIn('created_by', $userIds)->where('status', 'completed')->count(),
         ];
 
         return response()->json([
