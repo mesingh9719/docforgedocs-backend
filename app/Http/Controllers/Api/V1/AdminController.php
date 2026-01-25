@@ -65,9 +65,12 @@ class AdminController extends Controller
         $totalDocs = Document::count();
         $currentMRR = $totalUsers * 29; // Estimated MRR
 
-        // Comparison (vs last month)
+        // Comparision (vs last month)
         $lastMonthUsers = User::where('created_at', '<=', now()->subMonth())->count();
         $usersChange = $lastMonthUsers > 0 ? round((($totalUsers - $lastMonthUsers) / $lastMonthUsers) * 100, 1) : 100;
+
+        // Unread Inquiries
+        $unreadInquiries = \App\Models\ContactInquiry::where('status', 'new')->count();
 
         return response()->json([
             'metrics' => [
@@ -90,6 +93,11 @@ class AdminController extends Controller
                     'value' => '0.8%', // Mock
                     'change' => '-0.1%',
                     'trend' => 'down' // Down is good for churn
+                ],
+                'unread_inquiries' => [
+                    'value' => $unreadInquiries,
+                    'change' => '0',
+                    'trend' => 'neutral'
                 ]
             ],
             'charts' => [
