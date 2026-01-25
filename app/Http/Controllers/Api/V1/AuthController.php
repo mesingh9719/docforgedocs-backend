@@ -104,6 +104,9 @@ class AuthController extends Controller
 
     public function updateProfile(Request $request)
     {
+        \Illuminate\Support\Facades\Log::info('Update Profile Request', $request->all());
+        \Illuminate\Support\Facades\Log::info('Has File: ' . ($request->hasFile('avatar') ? 'Yes' : 'No'));
+
         $user = $request->user();
         $data = $request->validate([
             'name' => 'required|string|max:255',
@@ -116,7 +119,19 @@ class AuthController extends Controller
         if (!empty($data['password'])) {
             $user->password = \Illuminate\Support\Facades\Hash::make($data['password']);
         }
+
+        if ($request->hasFile('avatar')) {
+            try {
+                $path = $request->file('avatar')->store('avatars', 'public');
+                \Illuminate\Support\Facades\Log::info('Avatar Stored at: ' . $path);
+                $user->avatar = $path;
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Avatar Upload Failed: ' . $e->getMessage());
+            }
+        }
+
         $user->save();
+        \Illuminate\Support\Facades\Log::info('User Saved', $user->toArray());
 
         return response()->json([
             'message' => 'Profile updated successfully.',

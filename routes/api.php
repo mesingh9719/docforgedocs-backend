@@ -31,11 +31,16 @@ Route::prefix('v1')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
-        Route::put('/user/profile', [AuthController::class, 'updateProfile']);
+        Route::post('/user/profile', [AuthController::class, 'updateProfile']);
         Route::post('/business-update', [AuthController::class, 'businessUpdate']);
         Route::get('/user', function (Request $request) {
             return new \App\Http\Resources\Api\V1\UserResource($request->user());
         });
+
+        // Notifications
+        Route::get('/notifications', [\App\Http\Controllers\Api\V1\NotificationController::class, 'index']);
+        Route::post('/notifications/mark-all-read', [\App\Http\Controllers\Api\V1\NotificationController::class, 'markAllAsRead']);
+        Route::put('/notifications/{id}/read', [\App\Http\Controllers\Api\V1\NotificationController::class, 'markAsRead']);
 
         // Master Data Routes
         Route::get('/currencies', [\App\Http\Controllers\Api\V1\MasterDataController::class, 'currencies']);

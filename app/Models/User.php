@@ -25,8 +25,16 @@ class User extends Authenticatable implements MustVerifyEmail, CanResetPasswordC
         'name',
         'email',
         'password',
+        'avatar', // Added avatar
         'email_verified_at',
     ];
+
+    protected $appends = ['avatar_url']; // Append accessor
+
+    public function getAvatarUrlAttribute()
+    {
+        return $this->avatar ? asset('storage/' . $this->avatar) : null;
+    }
 
     /**
      * The attributes that should be hidden for serialization.
