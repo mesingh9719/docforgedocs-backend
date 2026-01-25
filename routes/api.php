@@ -63,6 +63,7 @@ Route::prefix('v1')->group(function () {
         Route::apiResource('team', TeamController::class)->except(['show']); // No show needed
         Route::get('/permissions', [\App\Http\Controllers\Api\V1\PermissionController::class, 'index']);
         Route::get('/dashboard/stats', [\App\Http\Controllers\Api\V1\DashboardController::class, 'stats']);
+        Route::get('/dashboard/analytics', [\App\Http\Controllers\Api\V1\DashboardController::class, 'analytics']);
         Route::get('/dashboard/activity', [\App\Http\Controllers\Api\V1\DashboardController::class, 'activity']);
 
         Route::post('businesses', [BusinessController::class, 'store']);

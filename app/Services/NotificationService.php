@@ -72,4 +72,26 @@ class NotificationService
             return Mail::to($email)->send(new TeamInvitation($link, $businessName, $role, $senderName));
         }
     }
+
+    /**
+     * Send Password Reset Email
+     */
+    public function sendPasswordResetEmail(User $user, string $link)
+    {
+        if ($this->environment === 'production') {
+            Log::info("Sending Password Reset via MSG91 to {$user->email}");
+            return $this->msg91Service->sendEmail(
+                ['email' => $user->email, 'name' => $user->name],
+                config('services.msg91.password_reset_template_id', 'password_reset_docforge_docs'),
+                [
+                    'name' => $user->name,
+                    'reset_link' => $link,
+                    'year' => date('Y'),
+                ]
+            );
+        } else {
+            Log::info("Sending Password Reset via SMTP to {$user->email}");
+            return Mail::to($user->email)->send(new \App\Mail\PasswordReset($user->name, $link));
+        }
+    }
 }
