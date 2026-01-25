@@ -195,6 +195,16 @@ class TeamController extends Controller
         // Login User
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        // Notify the inviter (Parent User)
+        try {
+            $inviter = User::find($childUser->created_by);
+            if ($inviter) {
+                $inviter->notify(new \App\Notifications\InvitationAccepted($user));
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error("Failed to send in-app notification: " . $e->getMessage());
+        }
+
         return response()->json([
             'message' => 'Invitation accepted successfully.',
             'token' => $token,

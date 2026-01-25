@@ -55,16 +55,21 @@ class NotificationService
                 $email,
                 config('services.msg91.invitation_template_id', 'team_invitation_docforge_docs'),
                 [
-                    'link' => $link,
-                    'business_name' => $businessName,
+                    'link' => $link, // Legacy support
+                    'invite_link' => $link,
+                    'business_name' => $businessName, // Legacy
+                    'company_name' => $businessName,
                     'role' => $role,
-                    'sender_name' => $senderName,
+                    'sender_name' => $senderName, // Legacy
+                    'inviter_name' => $senderName,
+                    'name' => 'User', // Placeholder as per controller logic
                 ]
             );
         } else {
             Log::info("Sending Team Invitation via SMTP to {$email}");
             // Send via Laravel Mail
-            return Mail::to($email)->send(new TeamInvitation($link, $businessName, $role));
+            // Assuming name is unknown at this point, we use 'User' or could use email
+            return Mail::to($email)->send(new TeamInvitation($link, $businessName, $role, $senderName));
         }
     }
 }

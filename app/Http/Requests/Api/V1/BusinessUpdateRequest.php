@@ -11,7 +11,27 @@ class BusinessUpdateRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        $user = $this->user();
+        $business = $user->resolveBusiness();
+
+        if (!$business) {
+            return false;
+        }
+
+        // Owner is always authorized
+        if ($business->user_id === $user->id) {
+            return true;
+        }
+
+        // Check for specific permission
+        $permissions = $user->resolvePermissions();
+
+        // Handle wildcard permission (Owner or Super Admin logic if applicable)
+        if (in_array('*', $permissions)) {
+            return true;
+        }
+
+        return in_array('settings.manage', $permissions);
     }
 
     /**

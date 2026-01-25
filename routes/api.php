@@ -13,6 +13,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/public/documents/{token}', [App\Http\Controllers\Api\V1\PublicDocumentController::class, 'show']);
     Route::post('register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/forgot-password', [App\Http\Controllers\Api\V1\PasswordResetController::class, 'sendResetLinkEmail']);
+    Route::post('/reset-password', [App\Http\Controllers\Api\V1\PasswordResetController::class, 'reset']);
     Route::post('/accept-invite', [TeamController::class, 'acceptInvite']);
 
     // Email Verification

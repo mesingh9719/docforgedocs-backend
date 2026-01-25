@@ -40,7 +40,7 @@ return [
         'domain' => env('MSG91_DOMAIN', 'mail.docforgedocs.com'),
         'from_email' => env('MSG91_FROM_EMAIL', 'no-reply@mail.docforgedocs.com'),
         'verification_template_id' => env('MSG91_VERIFICATION_TEMPLATE_ID', 'email_verification_docforge_docs'),
-        'invitation_template_id' => env('MSG91_INVITATION_TEMPLATE_ID', 'team_invitation_docforge_docs'),
+        'invitation_template_id' => env('MSG91_MEMBER_INVITE_TEMPLATE_ID', 'member_invitation_for_docforgedocs'),
     ],
     'app' => [
         'email_environment' => env('EMAIL_ENVIRONMENT', 'local'),

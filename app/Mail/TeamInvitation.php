@@ -16,15 +16,19 @@ class TeamInvitation extends Mailable
     public $inviteUrl;
     public $businessName;
     public $role;
+    public $inviterName;
+    public $name;
 
     /**
      * Create a new message instance.
      */
-    public function __construct($inviteUrl, $businessName, $role)
+    public function __construct($inviteUrl, $businessName, $role, $inviterName, $name = 'User')
     {
         $this->inviteUrl = $inviteUrl;
         $this->businessName = $businessName;
         $this->role = $role;
+        $this->inviterName = $inviterName;
+        $this->name = $name;
     }
 
     /**
