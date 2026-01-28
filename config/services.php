@@ -14,6 +14,8 @@ return [
     |
     */
 
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
+
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
     ],
