@@ -27,6 +27,7 @@ class User extends Authenticatable implements MustVerifyEmail, CanResetPasswordC
         'password',
         'avatar', // Added avatar
         'email_verified_at',
+        'google_id',
     ];
 
     protected $appends = ['avatar_url']; // Append accessor
