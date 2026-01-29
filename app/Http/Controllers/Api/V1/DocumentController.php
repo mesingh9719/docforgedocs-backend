@@ -27,7 +27,12 @@ class DocumentController extends Controller
         }
 
         $query = Document::where('business_id', $business->id)
-            ->with('documentType');
+            ->with(['documentType', 'creator']);
+
+        // Handle Trash View
+        if ($request->input('view_mode') === 'trash') {
+            $query->onlyTrashed();
+        }
 
         if ($request->has('search')) {
             $search = $request->input('search');
@@ -49,7 +54,19 @@ class DocumentController extends Controller
             });
         }
 
-        $documents = $query->latest()->paginate(20);
+        // Sorting
+        $sortBy = $request->input('sort_by', 'created_at');
+        $sortOrder = $request->input('sort_order', 'desc');
+        $allowedSort = ['name', 'created_at', 'updated_at', 'status'];
+        if (in_array($sortBy, $allowedSort)) {
+            $query->orderBy($sortBy, $sortOrder);
+        } else {
+            $query->latest();
+        }
+
+        // Variable Pagination
+        $perPage = $request->input('per_page', 10);
+        $documents = $query->paginate($perPage);
 
         return DocumentResource::collection($documents);
     }
@@ -64,6 +81,15 @@ class DocumentController extends Controller
 
         if (!$business) {
             return response()->json(['message' => 'User does not have a business.'], 403);
+        }
+
+        // Check for duplicate name
+        if (Document::where('business_id', $business->id)->where('name', $request->name)->exists()) {
+            $suggestion = $this->getSmartSuggestion($request->name, $business->id);
+            return response()->json([
+                'message' => 'Document name already exists.',
+                'suggested_name' => $suggestion
+            ], 422);
         }
 
         $type = DocumentType::where('slug', $request->type_slug)->firstOrFail();
@@ -113,6 +139,17 @@ class DocumentController extends Controller
         $business = $request->user()->resolveBusiness();
         if (!$business || $document->business_id !== $business->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Check for duplicate name (excluding current document)
+        if ($request->has('name') && $request->name !== $document->name) {
+            if (Document::where('business_id', $business->id)->where('name', $request->name)->where('id', '!=', $document->id)->exists()) {
+                $suggestion = $this->getSmartSuggestion($request->name, $business->id, $document->id);
+                return response()->json([
+                    'message' => 'Document name already exists.',
+                    'suggested_name' => $suggestion
+                ], 422);
+            }
         }
 
         $document->update([
@@ -171,9 +208,11 @@ class DocumentController extends Controller
 
         $request->validate([
             'html_content' => 'required|string',
+            'lock_document' => 'nullable|boolean'
         ]);
 
         $html = $request->input('html_content');
+        $shouldLock = $request->input('lock_document', false);
 
         // Wraps the document HTML with the full page structure and styles.
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a4', 'portrait');
@@ -187,19 +226,25 @@ class DocumentController extends Controller
 
         \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $pdf->output());
 
-        $document->update(['pdf_path' => $filename]);
+        $updateData = ['pdf_path' => $filename];
+        if ($shouldLock) {
+            $updateData['status'] = 'LOCKED'; // Assuming 'LOCKED' or similar status exists or just string
+        }
+
+        $document->update($updateData);
 
         \App\Services\ActivityLogger::log(
             'document.generated_pdf',
-            "PDF Generated for: {$document->name}",
+            "PDF Generated for: {$document->name}" . ($shouldLock ? " (Locked)" : ""),
             'info',
             ['document_id' => $document->id],
-            $business->user_id // or Auth::id()
+            $business->user_id
         );
 
         return response()->json([
             'message' => 'PDF generated successfully',
-            'url' => asset('storage/' . $filename)
+            'url' => asset('storage/' . $filename),
+            'status' => $document->status
         ]);
     }
     public function getNextInvoiceNumber(Request $request)
@@ -432,5 +477,80 @@ class DocumentController extends Controller
         return response()->json([
             'data' => $document->shares()->with('sender:id,name')->get()
         ]);
+    }
+    public function bulkDestroy(Request $request)
+    {
+        $business = $request->user()->resolveBusiness();
+        if (!$business) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:documents,id'
+        ]);
+
+        $ids = $request->input('ids');
+
+        // Ensure user owns these documents
+        $count = Document::where('business_id', $business->id)
+            ->whereIn('id', $ids)
+            ->delete();
+
+        return response()->json(['message' => "{$count} documents moved to trash."]);
+    }
+
+    public function restore(Request $request, $id)
+    {
+        $business = $request->user()->resolveBusiness();
+        if (!$business) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $document = Document::onlyTrashed()
+            ->where('business_id', $business->id)
+            ->where('id', $id)
+            ->firstOrFail();
+
+        $document->restore();
+
+        \App\Services\ActivityLogger::log(
+            'document.restored',
+            "Document restored: {$document->name}",
+            'info',
+            ['document_id' => $document->id],
+            $request->user()->id
+        );
+
+        return response()->json(['message' => 'Document restored successfully.']);
+    }
+    /**
+     * Generate a smart suggestion for a unique name.
+     */
+    private function getSmartSuggestion($name, $businessId, $excludeId = null)
+    {
+        $counter = 1;
+        $originalName = $name;
+
+        // Strip existing counter if present, e.g., "NDA (1)" -> "NDA"
+        if (preg_match('/^(.*) \((\d+)\)$/', $name, $matches)) {
+            $originalName = $matches[1];
+            $counter = intval($matches[2]) + 1;
+        }
+
+        // Generate suggestions until one is unique
+        do {
+            $suggestion = "{$originalName} ({$counter})";
+            $query = Document::where('business_id', $businessId)->where('name', $suggestion);
+            if ($excludeId) {
+                $query->where('id', '!=', $excludeId);
+            }
+            $exists = $query->exists();
+            if ($exists) {
+                $counter++;
+            }
+        } while ($exists);
+
+        return $suggestion;
     }
 }

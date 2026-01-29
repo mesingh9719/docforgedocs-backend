@@ -94,9 +94,13 @@ Route::prefix('v1')->group(function () {
         Route::post('documents/{document}/generate-pdf', [DocumentController::class, 'generatePdf']);
         Route::post('documents/{document}/send', [DocumentController::class, 'send']);
         Route::post('documents/{document}/remind', [DocumentController::class, 'remind']);
+        Route::post('documents/bulk-delete', [DocumentController::class, 'bulkDestroy']);
+        Route::post('documents/{document}/restore', [DocumentController::class, 'restore']);
         Route::get('documents/{document}/versions', [DocumentController::class, 'getVersions']);
         Route::get('documents/{document}/shares', [DocumentController::class, 'getShares']);
         Route::post('documents/{document}/restore/{version}', [DocumentController::class, 'restoreVersion']);
+
+        Route::apiResource('signatures', \App\Http\Controllers\Api\V1\UserSignatureController::class);
         Route::apiResource('team', TeamController::class)->except(['show']); // No show needed
         Route::get('/permissions', [\App\Http\Controllers\Api\V1\PermissionController::class, 'index']);
         Route::get('/dashboard/stats', [\App\Http\Controllers\Api\V1\DashboardController::class, 'stats']);

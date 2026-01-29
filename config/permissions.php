@@ -52,5 +52,9 @@ return [
             'label' => 'Manage Business Settings',
             'roles' => ['admin'],
         ],
+        'settings.signature' => [
+            'label' => 'Manage Signature',
+            'roles' => ['admin', 'editor', 'member', 'viewer'],
+        ],
     ],
 ];
