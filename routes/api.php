@@ -78,8 +78,8 @@ Route::prefix('v1')->group(function () {
             Route::get('/admin/activities', [AdminController::class, 'activities']);
             Route::get('/admin/settings', [AdminSettingController::class, 'index']);
             Route::post('/admin/settings', [AdminSettingController::class, 'update']);
-            Route::apiResource('/admin/users', AdminUserController::class);
-            Route::apiResource('/admin/documents', AdminDocumentController::class);
+            Route::apiResource('/admin/users', AdminUserController::class)->names('admin.users');
+            Route::apiResource('/admin/documents', AdminDocumentController::class)->names('admin.documents');
 
             // Master Data Routes
             Route::controller(AdminMasterDataController::class)->prefix('admin/master-data')->group(function () {
