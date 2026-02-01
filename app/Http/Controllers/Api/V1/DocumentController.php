@@ -84,6 +84,16 @@ class DocumentController extends Controller
             });
         }
 
+        // Category Filter (Signature vs Generated)
+        if ($request->has('category') && $request->input('category') !== 'all') {
+            $category = $request->input('category');
+            if ($category === 'signature') {
+                $query->has('signers');
+            } elseif ($category === 'generated') {
+                $query->doesntHave('signers');
+            }
+        }
+
         // Sorting
         $sortBy = $request->input('sort_by', 'created_at');
         $sortOrder = $request->input('sort_order', 'desc');
