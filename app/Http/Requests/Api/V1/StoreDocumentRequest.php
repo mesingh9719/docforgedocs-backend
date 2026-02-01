@@ -17,6 +17,13 @@ class StoreDocumentRequest extends FormRequest
     protected function prepareForValidation()
     {
         \Illuminate\Support\Facades\Log::info('StoreDocumentRequest Input:', $this->all());
+
+        if ($this->has('content') && is_string($this->content)) {
+            $decoded = json_decode($this->content, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $this->merge(['content' => $decoded]);
+            }
+        }
     }
 
     /**

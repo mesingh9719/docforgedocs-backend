@@ -80,7 +80,7 @@ class CmsController extends Controller
             'slug' => $slug,
             'category_id' => $request->category_id,
             'summary' => $request->summary,
-            'content' => $request->content,
+            'content' => $request->input('content'),
             'featured_image' => $request->featured_image,
             'status' => $request->status,
             'published_at' => $request->status === 'published' ? now() : null,

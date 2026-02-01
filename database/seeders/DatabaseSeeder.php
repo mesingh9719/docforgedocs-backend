@@ -21,12 +21,14 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Non-Disclosure Agreement', 'slug' => 'nda', 'description' => 'Standard NDA template'],
             ['name' => 'Business Proposal', 'slug' => 'proposal', 'description' => 'Project proposal template'],
             ['name' => 'Invoice', 'slug' => 'invoice', 'description' => 'Service invoice template'],
+            ['name' => 'Employment Offer Letter', 'slug' => 'offer-letter', 'description' => 'Standard job offer letter template'],
+            ['name' => 'Consulting Agreement', 'slug' => 'consulting-agreement', 'description' => 'Contract for consulting services'],
         ], ['slug'], ['name', 'description']);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        User::firstOrCreate(
+            ['email' => 'test@example.com'],
+            ['name' => 'Test User']
+        );
 
         $this->call([
             AdminUserSeeder::class,

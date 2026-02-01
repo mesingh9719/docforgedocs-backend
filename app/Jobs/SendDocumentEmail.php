@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\User;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -34,7 +35,9 @@ class SendDocumentEmail implements ShouldQueue
         // The service needs proper names
         // document->created_by user name is sender
         $senderName = $this->document->creator ? $this->document->creator->name : config('app.name');
-        $recipientName = 'Recipient'; // Or derive from email if user exists?
+
+        $recipientUser = User::where('email', $this->email)->first();
+        $recipientName = $recipientUser ? $recipientUser->name : 'Recipient';
 
         $notificationService->sendDocumentShared(
             $this->email,

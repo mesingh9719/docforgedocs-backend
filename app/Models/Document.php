@@ -20,17 +20,33 @@ class Document extends Model
         'status',
         'public_token',
         'pdf_path',
+        'final_pdf_path',
+        'document_hash',
+        'is_locked',
+        'expires_at',
     ];
 
     protected $casts = [
         'content' => 'array',
+        'is_locked' => 'boolean',
+        'expires_at' => 'datetime',
     ];
 
-    protected $appends = ['pdf_url'];
+    protected $appends = ['pdf_url', 'final_pdf_url'];
 
     public function getPdfUrlAttribute()
     {
         return $this->pdf_path ? asset('storage/' . $this->pdf_path) : null;
+    }
+
+    public function getFinalPdfUrlAttribute()
+    {
+        return $this->final_pdf_path ? asset('storage/' . $this->final_pdf_path) : null;
+    }
+
+    public function business()
+    {
+        return $this->belongsTo(Business::class);
     }
 
     public function documentType()
@@ -38,9 +54,19 @@ class Document extends Model
         return $this->belongsTo(DocumentType::class);
     }
 
-    public function business()
+    public function signers()
     {
-        return $this->belongsTo(Business::class);
+        return $this->hasMany(DocumentSigner::class)->orderBy('order');
+    }
+
+    public function fields()
+    {
+        return $this->hasMany(DocumentField::class);
+    }
+
+    public function auditLogs()
+    {
+        return $this->hasMany(AuditLog::class)->orderBy('created_at', 'desc');
     }
 
     public function creator()

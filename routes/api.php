@@ -1,62 +1,88 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AdminController;
+use App\Http\Controllers\Api\V1\AdminDocumentController;
+use App\Http\Controllers\Api\V1\AdminMasterDataController;
+use App\Http\Controllers\Api\V1\AdminUserController;
 use App\Http\Controllers\Api\V1\AuthController;
-use App\Http\Controllers\Api\V1\BusinessController;
-use App\Http\Controllers\Api\V1\CmsController;
 use App\Http\Controllers\Api\V1\DocumentController;
+use App\Http\Controllers\Api\V1\MasterDataController;
+use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\PasswordResetController;
+use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\SignatureController;
+use App\Http\Controllers\Api\V1\PublicDocumentController;
 use App\Http\Controllers\Api\V1\PublicCmsController;
 use App\Http\Controllers\Api\V1\TeamController;
+use App\Http\Controllers\Api\V1\AdminSettingController;
+use App\Http\Controllers\Api\V1\CmsController;
+use App\Http\Controllers\Api\V1\VerificationController;
+use App\Http\Middleware\EnsurePlatformAdmin;
+use App\Http\Resources\Api\V1\UserResource;
+use App\Http\Controllers\Api\V1\PermissionController;
+use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\BusinessController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 
 Route::prefix('v1')->group(function () {
     // Public Routes
-    Route::get('/public/documents/{token}', [App\Http\Controllers\Api\V1\PublicDocumentController::class, 'show']);
+    Route::get('/file-proxy', [DocumentController::class, 'getStorageFile']);
+    Route::get('/public/documents/{token}', [PublicDocumentController::class, 'show'])->name('api.v1.public.documents.show');
+    Route::get('/public/documents/{token}/preview', [PublicDocumentController::class, 'preview'])->name('api.v1.public.documents.preview');
+    Route::get('/public/documents/{token}/download', [PublicDocumentController::class, 'download'])->name('api.v1.public.documents.download');
     Route::post('register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/forgot-password', [App\Http\Controllers\Api\V1\PasswordResetController::class, 'sendResetLinkEmail']);
-    Route::post('/reset-password', [App\Http\Controllers\Api\V1\PasswordResetController::class, 'reset']);
+    Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkEmail']);
+    Route::post('/reset-password', [PasswordResetController::class, 'reset']);
     Route::post('/accept-invite', [TeamController::class, 'acceptInvite']);
+    Route::get('/documents/{document}/pdf', [DocumentController::class, 'stream'])
+        ->name('documents.pdf');
 
     // Email Verification
     // Email Verification
-    Route::get('/email/verify/{id}/{hash}', [\App\Http\Controllers\Api\V1\VerificationController::class, 'verify'])
+    Route::get('/email/verify/{id}/{hash}', [VerificationController::class, 'verify'])
         ->name('verification.verify');
 
     // Email Resend
-    Route::post('/email/resend', [\App\Http\Controllers\Api\V1\VerificationController::class, 'resend'])
+    Route::post('/email/resend', [VerificationController::class, 'resend'])
         ->middleware(['auth:sanctum']);
+
+    // Public Signature Routes
+    Route::get('/signatures/{token}', [SignatureController::class, 'show'])->name('api.v1.signatures.show');
+    Route::get('/signatures/{token}/preview', [SignatureController::class, 'preview'])->name('api.v1.signatures.preview');
+    Route::get('/signatures/{token}/download-signed', [SignatureController::class, 'downloadSigned'])->name('api.v1.signatures.download_signed');
+    Route::post('/signatures/{token}/sign', [SignatureController::class, 'sign'])->name('api.v1.signatures.sign');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::post('/user/profile', [AuthController::class, 'updateProfile']);
         Route::post('/business-update', [AuthController::class, 'businessUpdate']);
         Route::get('/user', function (Request $request) {
-            return new \App\Http\Resources\Api\V1\UserResource($request->user());
+            return new UserResource($request->user());
         });
 
         // Notifications
-        Route::get('/notifications', [\App\Http\Controllers\Api\V1\NotificationController::class, 'index']);
-        Route::post('/notifications/mark-all-read', [\App\Http\Controllers\Api\V1\NotificationController::class, 'markAllAsRead']);
-        Route::put('/notifications/{id}/read', [\App\Http\Controllers\Api\V1\NotificationController::class, 'markAsRead']);
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+        Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
 
         // Master Data Routes
-        Route::get('/currencies', [\App\Http\Controllers\Api\V1\MasterDataController::class, 'currencies']);
-        Route::get('/tax-rates', [\App\Http\Controllers\Api\V1\MasterDataController::class, 'taxRates']);
+        Route::get('/currencies', [MasterDataController::class, 'currencies']);
+        Route::get('/tax-rates', [MasterDataController::class, 'taxRates']);
 
         // Admin Routes
-        Route::middleware([\App\Http\Middleware\EnsurePlatformAdmin::class])->group(function () {
-            Route::get('/admin/stats', [\App\Http\Controllers\Api\V1\AdminController::class, 'stats']);
-            Route::get('/admin/activities', [\App\Http\Controllers\Api\V1\AdminController::class, 'activities']);
-            Route::get('/admin/settings', [\App\Http\Controllers\Api\V1\AdminSettingController::class, 'index']);
-            Route::post('/admin/settings', [\App\Http\Controllers\Api\V1\AdminSettingController::class, 'update']);
-            Route::apiResource('/admin/users', \App\Http\Controllers\Api\V1\AdminUserController::class);
-            Route::apiResource('/admin/documents', \App\Http\Controllers\Api\V1\AdminDocumentController::class);
+        Route::middleware([EnsurePlatformAdmin::class])->group(function () {
+            Route::get('/admin/stats', [AdminController::class, 'stats']);
+            Route::get('/admin/activities', [AdminController::class, 'activities']);
+            Route::get('/admin/settings', [AdminSettingController::class, 'index']);
+            Route::post('/admin/settings', [AdminSettingController::class, 'update']);
+            Route::apiResource('/admin/users', AdminUserController::class);
+            Route::apiResource('/admin/documents', AdminDocumentController::class);
 
             // Master Data Routes
-            Route::controller(\App\Http\Controllers\Api\V1\AdminMasterDataController::class)->prefix('admin/master-data')->group(function () {
+            Route::controller(AdminMasterDataController::class)->prefix('admin/master-data')->group(function () {
                 Route::get('{type}', 'index');
                 Route::post('{type}', 'store');
                 Route::put('{type}/{id}', 'update');
@@ -90,7 +116,16 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::get('/documents/next-invoice-number', [DocumentController::class, 'getNextInvoiceNumber']);
-        Route::apiResource('documents', DocumentController::class);
+        // Signature Workflow
+        Route::get('/signatures', [SignatureController::class, 'index']);
+        Route::get('/signatures/{documentId}/view-signed', [SignatureController::class, 'viewSigned']);
+
+
+
+        Route::get('/signatures/{documentId}/download-pdf', [SignatureController::class, 'downloadPdf']);
+        Route::post('/signatures/upload', [SignatureController::class, 'upload']);
+        Route::post('/signatures/send', [SignatureController::class, 'send']);
+
         Route::post('documents/{document}/generate-pdf', [DocumentController::class, 'generatePdf']);
         Route::post('documents/{document}/send', [DocumentController::class, 'send']);
         Route::post('documents/{document}/remind', [DocumentController::class, 'remind']);
@@ -100,13 +135,14 @@ Route::prefix('v1')->group(function () {
         Route::get('documents/{document}/shares', [DocumentController::class, 'getShares']);
         Route::post('documents/{document}/restore/{version}', [DocumentController::class, 'restoreVersion']);
 
-        Route::apiResource('signatures', \App\Http\Controllers\Api\V1\UserSignatureController::class);
+        // Route::apiResource('signatures', \App\Http\Controllers\Api\V1\UserSignatureController::class);
         Route::apiResource('team', TeamController::class)->except(['show']); // No show needed
-        Route::get('/permissions', [\App\Http\Controllers\Api\V1\PermissionController::class, 'index']);
-        Route::get('/dashboard/stats', [\App\Http\Controllers\Api\V1\DashboardController::class, 'stats']);
-        Route::get('/dashboard/analytics', [\App\Http\Controllers\Api\V1\DashboardController::class, 'analytics']);
-        Route::get('/dashboard/activity', [\App\Http\Controllers\Api\V1\DashboardController::class, 'activity']);
+        Route::get('/permissions', [PermissionController::class, 'index']);
+        Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+        Route::get('/dashboard/analytics', [DashboardController::class, 'analytics']);
+        Route::get('/dashboard/activity', [DashboardController::class, 'activity']);
 
+        Route::apiResource('documents', DocumentController::class);
         Route::post('businesses', [BusinessController::class, 'store']);
         Route::put('business', [BusinessController::class, 'update']);
     });
@@ -118,5 +154,6 @@ Route::prefix('v1')->group(function () {
         Route::get('/posts/{slug}', [PublicCmsController::class, 'getPostBySlug']);
         Route::get('/contact-info', [PublicCmsController::class, 'getContactInfo']);
         Route::post('/contact', [PublicCmsController::class, 'submitContactForm']);
+
     });
 });

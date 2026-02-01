@@ -94,27 +94,35 @@ class NotificationService
             return Mail::to($user->email)->send(new \App\Mail\PasswordReset($user->name, $link));
         }
     }
+
     public function sendDocumentShared(string $email, string $recipientName, string $senderName, string $documentName, string $documentLink)
     {
         if ($this->environment === 'production') {
-            Log::info("Sending Document Shared Email via MSG91 to {$email}");
-            return $this->msg91Service->sendEmail(
-                ['email' => $email, 'name' => $recipientName],
-                config('services.msg91.document_shared_template_id', 'document_shared_template_docforgedocs'),
-                [
-                    'recipient_name' => $recipientName,
-                    'sender_name' => $senderName, // e.g. "John Doe"
-                    'document_name' => $documentName,
-                    'document_link' => $documentLink,
-                    'year' => date('Y'),
-                    'VAR1' => config('app.name', 'DocForgeDocs'),
-                ]
-            );
-        } else {
-            Log::info("Sending Document Shared Email via SMTP to {$email}");
-            // We would need a Mailable for this if using SMTP fallback
-            // For now, falling back to the generic DocumentShared mailable if it exists, or just log it
-            return Mail::to($email)->send(new \App\Mail\DocumentShared((object) ['name' => $documentName], $documentLink, ""));
+            // Use MSG91 Service
+            $templateId = config('services.msg91.document_shared_template_id');
+
+            // Map variables
+            $variables = [
+                'recipient_name' => $recipientName,
+                'sender_name' => $senderName,
+                'document_name' => $documentName,
+                'document_link' => $documentLink,
+                'year' => date('Y')
+            ];
+
+            Log::info("Sending Production Email via MSG91 to $email", ['template' => $templateId, 'vars' => $variables]);
+
+            return $this->msg91Service->sendEmail($email, $templateId, $variables);
+        }
+
+        // Local / Default: Use Laravel Mailable
+        try {
+            Mail::to($email)->send(new \App\Mail\DocumentShared((object) ['name' => $documentName], $documentLink, ""));
+            Log::info("Sent Local Email to $email");
+            return ['success' => true];
+        } catch (\Exception $e) {
+            Log::error("Failed to send local email: " . $e->getMessage());
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 }

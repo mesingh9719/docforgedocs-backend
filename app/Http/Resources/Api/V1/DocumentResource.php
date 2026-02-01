@@ -16,6 +16,7 @@ class DocumentResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'name' => $this->resource->name, // Explicitly expose name
             'title' => $this->resource->name, // Alias name to title for frontend
             'slug' => $this->resource->slug,
             'description' => $this->resource->description,
@@ -33,6 +34,9 @@ class DocumentResource extends JsonResource
                 'email' => $this->resource->creator->email,
             ] : null,
             'pdf_url' => $this->resource->pdf_url,
+            'final_pdf_url' => route('documents.pdf', $this->resource->id),
+            'fields' => $this->whenLoaded('fields'),
+            'signers' => $this->whenLoaded('signers'),
             'created_at' => $this->resource->created_at,
             'updated_at' => $this->resource->updated_at,
         ];

@@ -8,11 +8,40 @@ use App\Models\DocumentType;
 use App\Http\Resources\Api\V1\DocumentResource;
 use App\Http\Requests\Api\V1\StoreDocumentRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 
 class DocumentController extends Controller
 {
+    public function getStorageFile(Request $request)
+    {
+        $path = $request->query('path');
+        if (!$path) {
+            return response()->json(['message' => 'Path required'], 400);
+        }
+
+        // Detect if it's a full URL or relative path
+        if (Str::startsWith($path, config('app.url'))) {
+            $path = str_replace(config('app.url') . '/storage/', '', $path);
+        } elseif (Str::startsWith($path, '/storage/')) {
+            $path = substr($path, 9); // Remove /storage/
+        }
+
+        // Sanitize path (basic check)
+        if (strpos($path, '..') !== false) {
+            return response()->json(['message' => 'Invalid path'], 400);
+        }
+
+        $fullPath = storage_path('app/public/' . $path);
+
+        if (!file_exists($fullPath)) {
+            return response()->json(['message' => 'File not found', 'path' => $fullPath], 404);
+        }
+
+        return response()->file($fullPath);
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -84,13 +113,18 @@ class DocumentController extends Controller
         }
 
         // Check for duplicate name
-        if (Document::where('business_id', $business->id)->where('name', $request->name)->exists()) {
-            $suggestion = $this->getSmartSuggestion($request->name, $business->id);
-            return response()->json([
-                'message' => 'Document name already exists.',
-                'suggested_name' => $suggestion
-            ], 422);
+        // Check for duplicate name and auto-increment
+        $originalName = $request->name;
+        $counter = 1;
+
+        while (Document::where('business_id', $business->id)->where('name', $request->name)->exists()) {
+            // Incremental naming: Name (1), Name (2)...
+            // If original name already has (n), we should probably handle that, but typically stripping it and recounting is safer or just appending.
+            // Simple approach: Name (1), Name (2)
+            $request->merge(['name' => $originalName . ' (' . $counter . ')']);
+            $counter++;
         }
+
 
         $type = DocumentType::where('slug', $request->type_slug)->firstOrFail();
 
@@ -143,12 +177,17 @@ class DocumentController extends Controller
 
         // Check for duplicate name (excluding current document)
         if ($request->has('name') && $request->name !== $document->name) {
-            if (Document::where('business_id', $business->id)->where('name', $request->name)->where('id', '!=', $document->id)->exists()) {
-                $suggestion = $this->getSmartSuggestion($request->name, $business->id, $document->id);
-                return response()->json([
-                    'message' => 'Document name already exists.',
-                    'suggested_name' => $suggestion
-                ], 422);
+            $originalName = $request->name;
+            $counter = 1;
+
+            while (
+                Document::where('business_id', $business->id)
+                    ->where('name', $request->name)
+                    ->where('id', '!=', $document->id)
+                    ->exists()
+            ) {
+                $request->merge(['name' => $originalName . ' (' . $counter . ')']);
+                $counter++;
             }
         }
 
@@ -328,6 +367,10 @@ class DocumentController extends Controller
 
             \Illuminate\Support\Facades\Storage::disk('public')->put($filename, $pdf->output());
             $document->update(['pdf_path' => $filename]);
+        } elseif (!$document->pdf_path || !\Illuminate\Support\Facades\Storage::disk('public')->exists($document->pdf_path)) {
+            return response()->json([
+                'message' => 'Cannot share document: PDF version not found. Please open the document in the editor and save it to generate the PDF.'
+            ], 400);
         }
 
         // 2. Ensure Public Token
@@ -337,7 +380,7 @@ class DocumentController extends Controller
 
         // 3. Construct Public Link
         // Frontend URL /view/{token}
-        $shareLink = env('FRONTEND_URL') . "/view/" . $document->public_token;
+        $shareLink = config('services.frontend_url') . "/view/" . $document->public_token;
 
         // 4. Dispatch Job (Pass PDF path for attachment)
         \App\Jobs\SendDocumentEmail::dispatch($email, $document, $shareLink, $customMessage);
@@ -389,7 +432,7 @@ class DocumentController extends Controller
         $email = $request->input('email');
         $customMessage = "REMINDER: " . ($request->input('message') ?? 'Just following up on this document.');
 
-        $shareLink = $document->pdf_path ? asset('storage/' . $document->pdf_path) : env('FRONTEND_URL') . "/documents/" . $document->documentType->slug . "/" . $document->id;
+        $shareLink = $document->pdf_path ? asset('storage/' . $document->pdf_path) : config('services.frontend_url') . "/documents/" . $document->documentType->slug . "/" . $document->id;
 
         \App\Jobs\SendDocumentEmail::dispatch($email, $document, $shareLink, $customMessage);
 
@@ -552,5 +595,25 @@ class DocumentController extends Controller
         } while ($exists);
 
         return $suggestion;
+    }
+
+    public function stream(Document $document)
+    {
+        abort_unless($document->final_pdf_path, 404);
+
+        $path = $document->final_pdf_path;
+
+        abort_unless(
+            Storage::disk('public')->exists($path),
+            404
+        );
+
+        return response()->file(
+            storage_path('app/public/' . $path),
+            [
+                'Content-Type' => 'application/pdf',
+                'Access-Control-Allow-Origin' => '*',
+            ]
+        );
     }
 }
