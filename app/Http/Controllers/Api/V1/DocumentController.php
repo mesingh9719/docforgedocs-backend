@@ -56,7 +56,8 @@ class DocumentController extends Controller
         }
 
         $query = Document::where('business_id', $business->id)
-            ->with(['documentType', 'creator']);
+            ->with(['documentType', 'creator'])
+            ->withCount('signers');
 
         // Handle Trash View
         if ($request->input('view_mode') === 'trash') {
@@ -161,6 +162,8 @@ class DocumentController extends Controller
         if (!$business || $document->business_id !== $business->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
+
+        $document->load(['signers', 'fields']);
 
         return new DocumentResource($document);
     }

@@ -37,6 +37,7 @@ class DocumentResource extends JsonResource
             'final_pdf_url' => route('documents.pdf', $this->resource->id),
             'fields' => $this->whenLoaded('fields'),
             'signers' => $this->whenLoaded('signers'),
+            'signers_count' => $this->resource->signers_count,
             'created_at' => $this->resource->created_at,
             'updated_at' => $this->resource->updated_at,
         ];
