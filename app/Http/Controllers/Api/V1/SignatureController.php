@@ -121,8 +121,11 @@ class SignatureController extends Controller
             // Find or create 'general' document type
             $type = \App\Models\DocumentType::where('slug', 'general')->first();
             if (!$type) {
-                // Fallback if 'general' doesn't exist, try to find any valid type or fail
-                $type = \App\Models\DocumentType::first();
+                // If 'general' type doesn't exist, create it dynamically to avoid NULL error
+                $type = \App\Models\DocumentType::firstOrCreate(
+                    ['slug' => 'general'],
+                    ['name' => 'General', 'description' => 'General document type']
+                );
             }
 
             // Create Document Record
