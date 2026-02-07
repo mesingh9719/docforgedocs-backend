@@ -34,7 +34,7 @@ class DocumentResource extends JsonResource
                 'email' => $this->resource->creator->email,
             ] : null,
             'pdf_url' => $this->resource->pdf_url,
-            'final_pdf_url' => route('documents.pdf', $this->resource->id),
+            'final_pdf_url' => $this->resource->status === 'completed' ? route('documents.pdf', $this->resource->id) : null,
             'fields' => $this->whenLoaded('fields'),
             'signers' => $this->whenLoaded('signers'),
             'signers_count' => $this->resource->signers_count,

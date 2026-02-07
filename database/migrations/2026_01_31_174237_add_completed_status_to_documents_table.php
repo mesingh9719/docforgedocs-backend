@@ -12,7 +12,9 @@ return new class extends Migration {
     public function up(): void
     {
         // MySQL doesn't allow direct ALTER for ENUM, so we use raw SQL
-        DB::statement("ALTER TABLE documents MODIFY COLUMN status ENUM('draft', 'sent', 'archived', 'completed') DEFAULT 'draft'");
+        if (DB::getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE documents MODIFY COLUMN status ENUM('draft', 'sent', 'archived', 'completed') DEFAULT 'draft'");
+        }
     }
 
     /**

@@ -14,6 +14,11 @@ class DocumentSigner extends Model
         'token',
         'status', // sent, viewed, signed
         'order',
+        'access_code',
+        'is_access_code_required',
+        'verified_at',
+        'audit_consent_ip',
+        'audit_consent_at'
     ];
 
     public function document()

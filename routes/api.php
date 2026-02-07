@@ -54,6 +54,9 @@ Route::prefix('v1')->group(function () {
     Route::get('/signatures/{token}/preview', [SignatureController::class, 'preview'])->name('api.v1.signatures.preview');
     Route::get('/signatures/{token}/download-signed', [SignatureController::class, 'downloadSigned'])->name('api.v1.signatures.download_signed');
     Route::post('/signatures/{token}/sign', [SignatureController::class, 'sign'])->name('api.v1.signatures.sign');
+    Route::post('/signatures/{token}/agree', [SignatureController::class, 'agreeToTerms'])->name('api.v1.signatures.agree');
+    Route::post('/signatures/{token}/send-otp', [SignatureController::class, 'sendOtp'])->name('api.v1.signatures.send_otp');
+    Route::post('/signatures/{token}/verify-otp', [SignatureController::class, 'verifyOtp'])->name('api.v1.signatures.verify_otp');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);

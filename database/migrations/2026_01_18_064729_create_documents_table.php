@@ -20,7 +20,7 @@ return new class extends Migration {
             $table->string('description')->nullable();
             $table->string('slug');
             $table->json('content');
-            $table->enum('status', ['draft', 'sent', 'archived'])->default('draft');
+            $table->enum('status', ['draft', 'sent', 'archived', 'completed'])->default('draft');
             $table->timestamps();
         });
     }

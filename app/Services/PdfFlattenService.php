@@ -158,4 +158,51 @@ class PdfFlattenService
     {
         return preg_match('/^data:image\/(\w+);base64,/', $value);
     }
+
+    /**
+     * Merge the certificate PDF with the signed document PDF.
+     *
+     * @param string $signedPdfPath Relative path to signed PDF
+     * @param string $certificatePath Relative path to certificate PDF
+     * @return string Path to the final merged PDF
+     */
+    public function mergeCertificate(string $signedPdfPath, string $certificatePath): string
+    {
+        // Absolute paths
+        $signedAbs = Storage::disk('public')->path($signedPdfPath);
+        $certAbs = Storage::disk('public')->path($certificatePath);
+
+        if (!file_exists($signedAbs) || !file_exists($certAbs)) {
+            throw new \Exception("One of the files to merge does not exist.");
+        }
+
+        $pdf = new Fpdi();
+
+        // Import Signed Document Pages
+        $pageCount = $pdf->setSourceFile($signedAbs);
+        for ($i = 1; $i <= $pageCount; $i++) {
+            $tplId = $pdf->importPage($i);
+            $size = $pdf->getTemplateSize($tplId);
+            $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
+            $pdf->useTemplate($tplId);
+        }
+
+        // Import Certificate Pages
+        $certPageCount = $pdf->setSourceFile($certAbs);
+        for ($i = 1; $i <= $certPageCount; $i++) {
+            $tplId = $pdf->importPage($i);
+            $size = $pdf->getTemplateSize($tplId);
+            $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
+            $pdf->useTemplate($tplId);
+        }
+
+        // Save Final Output
+        $pathInfo = pathinfo($signedPdfPath);
+        $finalFilename = $pathInfo['dirname'] . '/' . $pathInfo['filename'] . '_final.pdf';
+        $finalAbsPath = Storage::disk('public')->path($finalFilename);
+
+        $pdf->Output('F', $finalAbsPath);
+
+        return $finalFilename;
+    }
 }
