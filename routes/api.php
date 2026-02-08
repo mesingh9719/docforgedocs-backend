@@ -145,22 +145,11 @@ Route::prefix('v1')->group(function () {
         Route::get('/dashboard/analytics', [DashboardController::class, 'analytics']);
         Route::get('/dashboard/activity', [DashboardController::class, 'activity']);
 
+        Route::post('documents/{document}/duplicate', [DocumentController::class, 'duplicate']);
+        Route::get('documents/export', [DocumentController::class, 'export']);
         Route::apiResource('documents', DocumentController::class);
 
-        // DMS Routes
-        Route::prefix('drive')->group(function () {
-            Route::get('/trash', [\App\Http\Controllers\Api\V1\Drive\NodeController::class, 'trash']);
-            Route::post('/nodes/{id}/restore', [\App\Http\Controllers\Api\V1\Drive\NodeController::class, 'restore']);
-            Route::delete('/nodes/{id}/force', [\App\Http\Controllers\Api\V1\Drive\NodeController::class, 'forceDelete']);
 
-            Route::get('/nodes', [\App\Http\Controllers\Api\V1\Drive\NodeController::class, 'index']);
-            Route::post('/nodes', [\App\Http\Controllers\Api\V1\Drive\NodeController::class, 'store']);
-            Route::get('/nodes/{id}/preview', [\App\Http\Controllers\Api\V1\Drive\NodeController::class, 'preview']);
-            Route::patch('/nodes/{id}/rename', [\App\Http\Controllers\Api\V1\Drive\NodeController::class, 'rename']);
-            Route::patch('/nodes/{id}/move', [\App\Http\Controllers\Api\V1\Drive\NodeController::class, 'move']);
-            Route::post('/nodes/{id}/copy', [\App\Http\Controllers\Api\V1\Drive\NodeController::class, 'copy']);
-            Route::delete('/nodes/{id}', [\App\Http\Controllers\Api\V1\Drive\NodeController::class, 'destroy']);
-        });
 
         Route::post('businesses', [BusinessController::class, 'store']);
         Route::put('business', [BusinessController::class, 'update']);

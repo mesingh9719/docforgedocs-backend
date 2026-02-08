@@ -254,6 +254,8 @@ class SignatureController extends Controller
                 );
             }
 
+            $document->update(['status' => 'sent']);
+
             DB::commit();
 
             return response()->json(['message' => 'Document sent successfully', 'signers' => array_values($signerMap)]);

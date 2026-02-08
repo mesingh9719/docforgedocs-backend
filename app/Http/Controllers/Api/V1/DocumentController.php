@@ -629,4 +629,104 @@ class DocumentController extends Controller
             ]
         );
     }
+    public function duplicate(Request $request, Document $document)
+    {
+        $business = $request->user()->resolveBusiness();
+        if (!$business || $document->business_id !== $business->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        // Generate new name
+        $newName = $document->name . ' (Copy)';
+        // Ensure uniqueness
+        $newName = $this->getSmartSuggestion($newName, $business->id);
+
+        $newDocument = Document::create([
+            'document_type_id' => $document->document_type_id,
+            'business_id' => $business->id,
+            'created_by' => $request->user()->id,
+            'updated_by' => $request->user()->id,
+            'name' => $newName,
+            'description' => $document->description,
+            'slug' => Str::slug($newName) . '-' . Str::random(5),
+            'content' => $document->content,
+            'pdf_path' => $document->pdf_path, // Copy PDF path for signature docs
+            'status' => 'draft', // Reset to draft
+        ]);
+
+        \App\Services\ActivityLogger::log(
+            'document.duplicated',
+            "Document duplicated from: {$document->name}",
+            'info',
+            ['original_id' => $document->id, 'new_id' => $newDocument->id],
+            $request->user()->id
+        );
+
+        return new DocumentResource($newDocument);
+    }
+
+    public function export(Request $request)
+    {
+        $user = $request->user();
+        $business = $user->resolveBusiness();
+
+        if (!$business) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
+        $query = Document::where('business_id', $business->id)->with('documentType', 'creator');
+
+        // Apply filters (same as index)
+        if ($request->has('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->has('status') && $request->input('status') !== 'all') {
+            $query->where('status', $request->input('status'));
+        }
+
+        if ($request->has('type') && $request->input('type') !== 'all') {
+            $type = $request->input('type');
+            $query->whereHas('documentType', function ($q) use ($type) {
+                $q->where('slug', $type);
+            });
+        }
+
+        $documents = $query->latest()->get();
+
+        $filename = "documents_export_" . date('Y-m-d_H-i-s') . ".csv";
+
+        $headers = [
+            "Content-type" => "text/csv",
+            "Content-Disposition" => "attachment; filename=$filename",
+            "Pragma" => "no-cache",
+            "Cache-Control" => "must-revalidate, post-check=0, pre-check=0",
+            "Expires" => "0"
+        ];
+
+        $callback = function () use ($documents) {
+            $file = fopen('php://output', 'w');
+            // Header row
+            fputcsv($file, ['ID', 'Name', 'Type', 'Status', 'Created By', 'Created At', 'Updated At']);
+
+            foreach ($documents as $doc) {
+                fputcsv($file, [
+                    $doc->id,
+                    $doc->name,
+                    $doc->documentType->name ?? 'Unknown',
+                    ucfirst($doc->status),
+                    $doc->creator->name ?? 'Unknown',
+                    $doc->created_at->format('Y-m-d H:i:s'),
+                    $doc->updated_at->format('Y-m-d H:i:s')
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
 }
