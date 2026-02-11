@@ -25,6 +25,7 @@ class RegisterRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'confirmed', 'min:8'],
+            'recaptcha_token' => ['required', 'string'],
             // Optional business registration fields if happening simultaneously
             'business_name' => ['nullable', 'string', 'max:255'],
         ];

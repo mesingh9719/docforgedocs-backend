@@ -9,7 +9,8 @@ class AuthController extends Controller
 {
     public function __construct(
         protected \App\Services\AuthService $authService,
-        protected \App\Services\BusinessService $businessService
+        protected \App\Services\BusinessService $businessService,
+        protected \App\Services\RecaptchaService $recaptchaService
     ) {
     }
 
@@ -21,6 +22,23 @@ class AuthController extends Controller
      */
     public function register(\App\Http\Requests\Api\V1\RegisterRequest $request)
     {
+        // Verify Recaptcha
+        $recaptchaResponse = $this->recaptchaService->verify($request->recaptcha_token);
+
+        if (
+            !($recaptchaResponse['success'] ?? false) ||
+            ($recaptchaResponse['score'] ?? 0) < config('services.recaptcha.min_score', 0.5)
+        ) {
+            \Illuminate\Support\Facades\Log::warning('Recaptcha verification failed', $recaptchaResponse);
+            return response()->json([
+                'message' => 'Recaptcha verification failed'
+            ], 422);
+        }
+
+        if (($recaptchaResponse['action'] ?? '') !== 'register') {
+            return response()->json(['message' => 'Invalid action'], 422);
+        }
+
         $result = $this->authService->register($request->validated());
 
         \App\Services\ActivityLogger::log(
