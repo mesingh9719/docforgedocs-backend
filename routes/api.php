@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\CmsController;
 use App\Http\Controllers\Api\V1\VerificationController;
 use App\Http\Middleware\EnsurePlatformAdmin;
 use App\Http\Resources\Api\V1\UserResource;
+use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\PermissionController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\BusinessController;
@@ -107,6 +108,12 @@ Route::prefix('v1')->group(function () {
                 Route::put('/posts/{post}', [CmsController::class, 'updatePost']);
                 Route::delete('/posts/{post}', [CmsController::class, 'destroyPost']);
 
+                // Team Management
+                Route::get('/team', [TeamController::class, 'index']);
+                Route::post('/team/invite', [TeamController::class, 'invite']);
+                Route::post('/team/{childUser}', [TeamController::class, 'update']);
+                Route::delete('/team/{childUser}', [TeamController::class, 'destroy']);
+
                 // Inquiries
                 Route::get('/inquiries', [CmsController::class, 'indexInquiries']);
                 Route::get('/inquiries/{inquiry}', [CmsController::class, 'showInquiry']);
@@ -140,6 +147,7 @@ Route::prefix('v1')->group(function () {
 
         // Route::apiResource('signatures', \App\Http\Controllers\Api\V1\UserSignatureController::class);
         Route::apiResource('team', TeamController::class)->except(['show']); // No show needed
+        Route::apiResource('roles', RoleController::class);
         Route::get('/permissions', [PermissionController::class, 'index']);
         Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
         Route::get('/dashboard/analytics', [DashboardController::class, 'analytics']);

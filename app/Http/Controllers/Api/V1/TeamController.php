@@ -52,9 +52,14 @@ class TeamController extends Controller
     {
         $request->validate([
             'email' => 'required|email',
-            'role' => 'required|in:admin,editor,member,viewer',
+            'role' => 'nullable|string', // Deprecated, but supported for now
+            'role_id' => 'nullable|exists:roles,id',
             'permissions' => 'nullable|array',
         ]);
+
+        if (!$request->role && !$request->role_id) {
+            return response()->json(['message' => 'Role is required.'], 422);
+        }
 
         $user = Auth::user();
         $business = $user->resolveBusiness();
@@ -63,12 +68,31 @@ class TeamController extends Controller
             return response()->json(['message' => 'No business found'], 404);
         }
 
-        $businessId = $business->id;
+        // Resolve Role ID
+        $roleId = $request->role_id;
+        if (!$roleId && $request->role) {
+            // Lookup system role by name
+            $systemRole = \App\Models\Role::where('name', $request->role)
+                ->where('is_system', true)
+                ->first();
 
-        // Identify the Business Owner (Parent)
-        // If current user owns the business, they are the parent.
-        // If current user is a sub-user, the business owner is the parent.
-        $ownerId = $business->user_id; // Assuming Business has user_id
+            if ($systemRole) {
+                $roleId = $systemRole->id;
+            } else {
+                // Try finding custom role by name for this business? Or just fail?
+                // Let's fail if not found as system role
+                return response()->json(['message' => 'Invalid role specified.'], 422);
+            }
+        }
+
+        // Verify role belongs to business or is system
+        $role = \App\Models\Role::find($roleId);
+        if (!$role || (!$role->is_system && $role->business_id !== $business->id)) {
+            return response()->json(['message' => 'Invalid role.'], 422);
+        }
+
+        $businessId = $business->id;
+        $ownerId = $business->user_id;
 
         // Check if user already exists
         $newUser = User::where('email', $request->email)->first();
@@ -83,11 +107,10 @@ class TeamController extends Controller
                 return response()->json(['message' => 'User is already a member of this team.'], 422);
             }
         } else {
-            // Create new user if not exists
             $newUser = User::create([
-                'name' => 'Pending User', // Placeholder
+                'name' => 'Pending User',
                 'email' => $request->email,
-                'password' => Hash::make(Str::random(32)), // Random secure password
+                'password' => Hash::make(Str::random(32)),
             ]);
         }
 
@@ -98,40 +121,36 @@ class TeamController extends Controller
             'parent_id' => $ownerId,
             'user_id' => $newUser->id,
             'business_id' => $businessId,
-            'role' => $request->role,
+            'role' => $role->name, // Keep for backward compatibility
+            'role_id' => $role->id,
             'status' => 'pending',
-            'permissions' => $request->permissions, // Store permissions
+            'permissions' => $request->permissions,
             'invitation_token' => $token,
-            'created_by' => $user->id, // The actual user who performed the invite
+            'created_by' => $user->id,
         ]);
 
-        // Send Invitation Email
+        // Send Invitation
         try {
-            // Use config or env for frontend URL
             $baseUrl = config('app.frontend_url', 'http://localhost:5173');
             $inviteUrl = "{$baseUrl}/accept-invite?token={$token}&email=" . urlencode($request->email);
 
-            $businessName = $business->name;
-
-            // Send Email using NotificationService
             $this->notificationService->sendTeamInvitation(
                 $newUser->email,
                 $inviteUrl,
-                $businessName,
-                $request->role,
+                $business->name,
+                $role->label,
                 $user->name
             );
 
             \App\Services\ActivityLogger::log(
                 'team.invite',
-                "Invited {$newUser->email} as {$request->role}",
+                "Invited {$newUser->email} as {$role->label}",
                 'info',
-                ['email' => $newUser->email, 'role' => $request->role],
+                ['email' => $newUser->email, 'role' => $role->name, 'role_id' => $role->id],
                 $user->id
             );
 
         } catch (\Exception $e) {
-            // Log email failure but don't fail the request completely if possible, or do.
             \Illuminate\Support\Facades\Log::error("Failed to send invitation email: " . $e->getMessage());
         }
 
@@ -144,18 +163,63 @@ class TeamController extends Controller
     public function update(Request $request, $id)
     {
         $childUser = ChildUser::findOrFail($id);
+        $user = Auth::user();
+        $business = $user->resolveBusiness();
 
-        // Authorization check: Ensure only parent/admin can update
-        if ($childUser->parent_id !== Auth::id()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        if (!$business) {
+            return response()->json(['message' => 'No business found'], 404);
+        }
+
+        // Authorization check: Ensure only parent (owner) can update?
+        // Actually, logic says owner is parent.
+        if ($childUser->parent_id !== $user->id) {
+            // Maybe business admin can also update?
+            // For now stick to original check but ensure it matches current user
+            if ($childUser->parent_id !== $user->id) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
         }
 
         $request->validate([
-            'role' => 'sometimes|in:admin,editor,member,viewer',
+            'role' => 'sometimes|string',
+            'role_id' => 'sometimes|exists:roles,id',
             'permissions' => 'nullable|array',
+            'status' => 'sometimes|in:active,pending,deactivated',
         ]);
 
-        $childUser->update($request->only(['role', 'status', 'permissions']));
+        $data = $request->only(['status', 'permissions']);
+
+        // Handle Role Update
+        if ($request->has('role_id') || $request->has('role')) {
+            $roleId = $request->role_id;
+
+            if (!$roleId && $request->role) {
+                $systemRole = \App\Models\Role::where('name', $request->role)
+                    ->where('is_system', true)
+                    ->first();
+                if ($systemRole) {
+                    $roleId = $systemRole->id;
+                } else {
+                    // Fail if explicitly trying to set a role that doesn't resolve?
+                    // Or keep old role string?
+                    // Better to fail validation effectively
+                    return response()->json(['message' => 'Invalid role specified.'], 422);
+                }
+            }
+
+            if ($roleId) {
+                $role = \App\Models\Role::find($roleId);
+                // Validate role ownership
+                if (!$role || (!$role->is_system && $role->business_id !== $business->id)) {
+                    return response()->json(['message' => 'Invalid role.'], 422);
+                }
+
+                $data['role_id'] = $role->id;
+                $data['role'] = $role->name; // Sync legacy column
+            }
+        }
+
+        $childUser->update($data);
 
         return response()->json(['message' => 'Member updated', 'data' => $childUser]);
     }

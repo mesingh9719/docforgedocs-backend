@@ -30,11 +30,16 @@ class User extends Authenticatable implements MustVerifyEmail, CanResetPasswordC
         'google_id',
     ];
 
-    protected $appends = ['avatar_url']; // Append accessor
+    protected $appends = ['avatar_url', 'permissions']; // Append accessor
 
     public function getAvatarUrlAttribute()
     {
         return $this->avatar ? asset('storage/' . $this->avatar) : null;
+    }
+
+    public function getPermissionsAttribute()
+    {
+        return $this->resolvePermissions();
     }
 
     /**
@@ -124,6 +129,9 @@ class User extends Authenticatable implements MustVerifyEmail, CanResetPasswordC
 
         // 2. If child user
         if ($this->parentUser) {
+            if ($this->parentUser->role_id && $this->parentUser->assignedRole) {
+                return $this->parentUser->assignedRole->name;
+            }
             return $this->parentUser->role;
         }
 
@@ -142,6 +150,12 @@ class User extends Authenticatable implements MustVerifyEmail, CanResetPasswordC
 
         // 2. If child user
         if ($this->parentUser) {
+            // Check if role is assigned via role_id
+            if ($this->parentUser->role_id && $this->parentUser->assignedRole) {
+                return $this->parentUser->assignedRole->permissions->pluck('name')->toArray();
+            }
+
+            // Fallback for migration: use old permissions column if it exists and role_id is null
             return $this->parentUser->permissions ?? [];
         }
 

@@ -10,9 +10,10 @@ class ChildUser extends Model
         'parent_id',
         'user_id',
         'business_id',
-        'role',
+        'role', // Deprecated, keep for now
+        'role_id', // New RBAC
         'status',
-        'permissions',
+        'permissions', // Deprecated, keep for migration
         'invitation_token',
         'created_by',
         'updated_by',
@@ -35,6 +36,11 @@ class ChildUser extends Model
     public function business()
     {
         return $this->belongsTo(Business::class);
+    }
+
+    public function assignedRole()
+    {
+        return $this->belongsTo(Role::class, 'role_id');
     }
 
     public function creator()
