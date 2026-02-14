@@ -45,8 +45,13 @@ class DocumentController extends Controller
     /**
      * Display a listing of the resource.
      */
+    /**
+     * Display a listing of the resource.
+     */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Document::class);
+
         // Filter by user's business
         $user = $request->user();
         $business = $user->resolveBusiness();
@@ -116,6 +121,8 @@ class DocumentController extends Controller
      */
     public function store(StoreDocumentRequest $request)
     {
+        $this->authorize('create', Document::class);
+
         $user = $request->user();
         $business = $user->resolveBusiness();
 
@@ -167,11 +174,7 @@ class DocumentController extends Controller
      */
     public function show(Request $request, Document $document)
     {
-        // Authorization check: User must own the business of the document
-        $business = $request->user()->resolveBusiness();
-        if (!$business || $document->business_id !== $business->id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
+        $this->authorize('view', $document);
 
         $document->load(['signers', 'fields']);
 
@@ -183,7 +186,10 @@ class DocumentController extends Controller
      */
     public function update(Request $request, Document $document)
     {
+        $this->authorize('update', $document);
+
         $business = $request->user()->resolveBusiness();
+        // Redundant check if policy works, but keeping for safety/business resolution
         if (!$business || $document->business_id !== $business->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
@@ -237,10 +243,7 @@ class DocumentController extends Controller
      */
     public function destroy(Request $request, Document $document)
     {
-        $business = $request->user()->resolveBusiness();
-        if (!$business || $document->business_id !== $business->id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
+        $this->authorize('delete', $document);
 
         if ($document->pdf_path && \Illuminate\Support\Facades\Storage::disk('public')->exists($document->pdf_path)) {
             \Illuminate\Support\Facades\Storage::disk('public')->delete($document->pdf_path);
@@ -253,6 +256,8 @@ class DocumentController extends Controller
 
     public function generatePdf(Request $request, Document $document)
     {
+        $this->authorize('update', $document); // Generating PDF acts as an update
+
         $business = $request->user()->resolveBusiness();
         if (!$business || $document->business_id !== $business->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
@@ -301,6 +306,8 @@ class DocumentController extends Controller
     }
     public function getNextInvoiceNumber(Request $request)
     {
+        $this->authorize('viewAny', Document::class);
+
         $user = $request->user();
         $business = $user->resolveBusiness();
 
@@ -353,6 +360,8 @@ class DocumentController extends Controller
 
     public function send(Request $request, Document $document)
     {
+        $this->authorize('update', $document); // Sending involves updating status and history
+
         $business = $request->user()->resolveBusiness();
         if (!$business || $document->business_id !== $business->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
@@ -428,6 +437,8 @@ class DocumentController extends Controller
 
     public function remind(Request $request, Document $document)
     {
+        $this->authorize('update', $document); // Assuming remind requires update permission
+
         $business = $request->user()->resolveBusiness();
         if (!$business || $document->business_id !== $business->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
@@ -472,6 +483,8 @@ class DocumentController extends Controller
 
     public function getVersions(Request $request, Document $document)
     {
+        $this->authorize('view', $document);
+
         $business = $request->user()->resolveBusiness();
         if (!$business || $document->business_id !== $business->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
@@ -492,6 +505,8 @@ class DocumentController extends Controller
 
     public function restoreVersion(Request $request, Document $document, $versionId)
     {
+        $this->authorize('update', $document);
+
         $business = $request->user()->resolveBusiness();
         if (!$business || $document->business_id !== $business->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
@@ -525,6 +540,8 @@ class DocumentController extends Controller
     }
     public function getShares(Request $request, Document $document)
     {
+        $this->authorize('view', $document);
+
         $business = $request->user()->resolveBusiness();
         if (!$business || $document->business_id !== $business->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
@@ -536,6 +553,15 @@ class DocumentController extends Controller
     }
     public function bulkDestroy(Request $request)
     {
+        // Bulk destroy requires explicit check per item, or a blanket permission
+        // Here we just check if they can delete ANY, then filter.
+        // Better: iterate and authorize each, or authorizing 'deleteAny' if that existed.
+        // For simplicity: check 'delete' permission on model class (not instance) if we had a class-level policy,
+        // or just check if user has 'document.delete' permission.
+        if (!$request->user()->hasPermissionTo('document.delete')) {
+            abort(403, 'Unauthorized');
+        }
+
         $business = $request->user()->resolveBusiness();
         if (!$business) {
             return response()->json(['message' => 'Unauthorized'], 403);
@@ -558,6 +584,12 @@ class DocumentController extends Controller
 
     public function restore(Request $request, $id)
     {
+        // Restore is like an update/create. Let's require delete permission to manage trash too,
+        // or update permission.
+        if (!$request->user()->hasPermissionTo('document.delete')) { // Usually trash management is same as delete
+            abort(403, 'Unauthorized');
+        }
+
         $business = $request->user()->resolveBusiness();
         if (!$business) {
             return response()->json(['message' => 'Unauthorized'], 403);
@@ -567,6 +599,8 @@ class DocumentController extends Controller
             ->where('business_id', $business->id)
             ->where('id', $id)
             ->firstOrFail();
+
+        $this->authorize('update', $document); // Double check
 
         $document->restore();
 
@@ -631,6 +665,9 @@ class DocumentController extends Controller
     }
     public function duplicate(Request $request, Document $document)
     {
+        $this->authorize('create', Document::class);
+        $this->authorize('view', $document); // Must be able to view original
+
         $business = $request->user()->resolveBusiness();
         if (!$business || $document->business_id !== $business->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
@@ -667,6 +704,8 @@ class DocumentController extends Controller
 
     public function export(Request $request)
     {
+        $this->authorize('viewAny', Document::class);
+
         $user = $request->user();
         $business = $user->resolveBusiness();
 

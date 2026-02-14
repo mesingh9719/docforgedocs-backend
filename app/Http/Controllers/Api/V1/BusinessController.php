@@ -40,12 +40,16 @@ class BusinessController extends Controller
      */
     public function update(BusinessUpdateRequest $request)
     {
+        // Resolve business first to pass to policy
         $user = $request->user();
         $business = $user->resolveBusiness();
 
         if (!$business) {
             return response()->json(['message' => 'User does not have a business.'], 403);
         }
+
+        // Authorize with policy
+        $this->authorize('update', $business);
 
         $business = $this->businessService->updateBusiness($business->id, $request->validated());
 

@@ -36,6 +36,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             SystemRoleSeeder::class,
             AdminUserSeeder::class,
+            MasterDataSeeder::class,
         ]);
     }
 }

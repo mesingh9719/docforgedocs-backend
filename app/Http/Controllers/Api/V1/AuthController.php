@@ -82,6 +82,35 @@ class AuthController extends Controller
     }
 
     /**
+     * Login an admin user (No Recaptcha).
+     *
+     * @param \App\Http\Requests\Api\V1\AdminLoginRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function adminLogin(\App\Http\Requests\Api\V1\AdminLoginRequest $request)
+    {
+        $result = $this->authService->login($request->validated());
+
+        // Optional: Check if user is actually an admin here or rely on middleware/frontend check
+        // For now, we reuse the generic login logic which just returns a token. 
+        // The frontend/middleware handles permission checks.
+
+        \App\Services\ActivityLogger::log(
+            'admin.login',
+            'Admin logged in',
+            'info',
+            ['ip' => $request->ip()],
+            $result['user']->id
+        );
+
+        return response()->json([
+            'message' => 'Admin Login successful.',
+            'data' => new \App\Http\Resources\Api\V1\UserResource($result['user']),
+            'token' => $result['token'],
+        ]);
+    }
+
+    /**
      * Logout a user.
      *
      * @param \Illuminate\Http\Request $request

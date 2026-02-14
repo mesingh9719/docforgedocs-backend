@@ -20,6 +20,8 @@ class SystemRoleSeeder extends Seeder
             ['name' => 'document.edit', 'label' => 'Edit Documents', 'group' => 'Documents'],
             ['name' => 'document.delete', 'label' => 'Delete Documents', 'group' => 'Documents'],
             ['name' => 'document.sign', 'label' => 'Sign Documents', 'group' => 'Documents'],
+            ['name' => 'document.export', 'label' => 'Export Documents', 'group' => 'Documents'],
+            ['name' => 'document.import', 'label' => 'Import Documents', 'group' => 'Documents'],
 
             // Team
             ['name' => 'team.view', 'label' => 'View Team', 'group' => 'Team'],
@@ -66,11 +68,14 @@ class SystemRoleSeeder extends Seeder
                     'document.edit',
                     'document.delete',
                     'document.sign',
+                    'document.export',
+                    'document.import',
                     'template.view',
                     'template.create',
                     'template.edit',
                     'template.delete',
                     'team.view',
+                    'team.invite',
                     'settings.view'
                 ]
             ],

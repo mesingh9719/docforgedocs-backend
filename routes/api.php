@@ -35,6 +35,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/public/documents/{token}/download', [PublicDocumentController::class, 'download'])->name('api.v1.public.documents.download');
     Route::post('register', [AuthController::class, 'register'])->middleware('throttle:5,1');
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
+    Route::post('/admin/login', [AuthController::class, 'adminLogin'])->middleware('throttle:5,1');
     Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLinkEmail']);
     Route::post('/reset-password', [PasswordResetController::class, 'reset']);
     Route::post('/accept-invite', [TeamController::class, 'acceptInvite']);
